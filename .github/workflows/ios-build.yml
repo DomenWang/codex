@@ -18,7 +18,7 @@ env:
 jobs:
   build:
     name: Build WeatherAlarm
-    runs-on: macos-15
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
@@ -30,6 +30,7 @@ jobs:
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
+          xcodebuild -showsdks
           xcrun simctl list devices available
 
       - name: Generate Xcode project
@@ -81,20 +82,43 @@ jobs:
           set -euo pipefail
           mkdir -p build-logs
 
+          build_status=0
+
           if [[ -n "${XCODE_WORKSPACE}" ]]; then
+            set +e
             xcodebuild \
               -workspace "${XCODE_WORKSPACE}" \
               -scheme "${SCHEME}" \
               -destination "${DESTINATION}" \
               CODE_SIGNING_ALLOWED=NO \
               clean build 2>&1 | tee build-logs/xcodebuild.log
+            build_status=${PIPESTATUS[0]}
+            set -e
           else
+            set +e
             xcodebuild \
               -project "${XCODE_PROJECT}" \
               -scheme "${SCHEME}" \
               -destination "${DESTINATION}" \
               CODE_SIGNING_ALLOWED=NO \
               clean build 2>&1 | tee build-logs/xcodebuild.log
+            build_status=${PIPESTATUS[0]}
+            set -e
+          fi
+
+          if [[ "${build_status}" -ne 0 ]]; then
+            echo "::group::xcodebuild error summary"
+            grep -nE "error:|warning:|No such module|SDK|deployment target|destination|BUILD FAILED|The iOS Simulator deployment target" build-logs/xcodebuild.log || true
+            echo "::endgroup::"
+
+            summary="$(grep -nE "error:|No such module|SDK|deployment target|destination|BUILD FAILED|The iOS Simulator deployment target" build-logs/xcodebuild.log | tail -20 | sed ':a;N;$!ba;s/\n/%0A/g' || true)"
+            if [[ -n "${summary}" ]]; then
+              echo "::error title=xcodebuild failed::${summary}"
+            else
+              echo "::error title=xcodebuild failed::See ios-build-logs artifact for the full xcodebuild output."
+            fi
+
+            exit "${build_status}"
           fi
 
       - name: Upload build logs

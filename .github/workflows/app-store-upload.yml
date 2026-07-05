@@ -18,7 +18,7 @@ env:
 jobs:
   archive-and-upload:
     name: Archive and Upload IPA
-    runs-on: macos-15
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
@@ -30,6 +30,7 @@ jobs:
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
+          xcodebuild -showsdks
 
       - name: Generate Xcode project
         shell: bash
