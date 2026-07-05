@@ -40,7 +40,7 @@ final class AlarmManager {
     init(
         settingsStore: AlarmSettingsStore = AlarmSettingsStore(),
         transitService: TransitService? = nil,
-        toastPresenter: ToastPresenting = NoopToastPresenter(),
+        toastPresenter: ToastPresenting? = nil,
         systemAlarmManager: AlarmKit.AlarmManager = .shared,
         calendar: Calendar = .current
     ) {
@@ -56,7 +56,7 @@ final class AlarmManager {
                 return baseDuration
             }
         )
-        self.toastPresenter = toastPresenter
+        self.toastPresenter = toastPresenter ?? NoopToastPresenter()
         self.systemAlarmManager = systemAlarmManager
         self.calendar = calendar
     }
