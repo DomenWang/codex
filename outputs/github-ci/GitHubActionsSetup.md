@@ -21,20 +21,20 @@ xcodebuild clean build
 
 ## Required before it can pass
 
-This workspace currently has Swift source files, but no Xcode project. Before GitHub can compile it, create and commit:
+This repository can generate the Xcode project in GitHub Actions through XcodeGen:
 
 ```text
-WeatherAlarm.xcodeproj
+project.yml
 ```
 
-Recommended Xcode project settings:
+The workflow runs:
 
-- Product: iOS App
-- Interface: SwiftUI
-- Language: Swift
-- Minimum Deployment: iOS 26.0
-- Scheme: WeatherAlarm
-- Add `outputs/WeatherAlarmCore` Swift files to the app target
+```bash
+brew install xcodegen
+xcodegen generate --spec project.yml
+```
+
+If you later create a real `WeatherAlarm.xcodeproj` in Xcode and commit it, the workflow will use that project instead.
 
 ## Capabilities
 

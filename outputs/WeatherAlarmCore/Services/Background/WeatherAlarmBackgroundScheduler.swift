@@ -20,7 +20,7 @@ enum WeatherAlarmBackgroundError: LocalizedError {
 /// 但 iOS 不保证精确 03:00 执行；`earliestBeginDate` 表示“最早可以开始”，
 /// 实际唤醒时间由系统根据电量、网络、用户使用习惯等因素决定。
 final class WeatherAlarmBackgroundScheduler {
-    static let taskIdentifier = "com.yourcompany.weatheralarm.daily-weather-refresh"
+    static let taskIdentifier = "com.domenwang.weatheralarm.daily-weather-refresh"
 
     private let weatherService: WeatherService
     private let alarmManager: AlarmManager

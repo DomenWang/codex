@@ -32,7 +32,7 @@ Add:
 
 <key>BGTaskSchedulerPermittedIdentifiers</key>
 <array>
-    <string>com.yourcompany.weatheralarm.daily-weather-refresh</string>
+    <string>com.domenwang.weatheralarm.daily-weather-refresh</string>
 </array>
 ```
 
@@ -43,4 +43,4 @@ Add:
 - WeatherKit failures are not masked with fake data. If WeatherKit, location, or permissions fail, the task fails and keeps the existing alarm unchanged.
 - TransitService failures are caught inside `AlarmManager`; the app falls back to weather-only alarm adjustment and publishes the Toast message `路况检测失败`.
 - SwiftUI screens should listen to `ToastMessageCenter` and use `toast(message:)`. Do not call `TransitService` directly from a View.
-- Replace `com.yourcompany.weatheralarm.daily-weather-refresh` with your real bundle-style identifier in both code and Info.plist.
+- Keep `com.domenwang.weatheralarm.daily-weather-refresh` identical in code, Info.plist, and `project.yml`.

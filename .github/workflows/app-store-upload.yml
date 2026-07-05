@@ -31,6 +31,21 @@ jobs:
           sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           xcodebuild -version
 
+      - name: Generate Xcode project
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${XCODE_WORKSPACE}" && ! -d "${XCODE_PROJECT}" ]]; then
+            if [[ ! -f project.yml ]]; then
+              echo "::error::Missing ${XCODE_PROJECT} and project.yml. Commit an Xcode project or an XcodeGen spec."
+              exit 1
+            fi
+
+            brew install xcodegen
+            xcodegen generate --spec project.yml
+          fi
+
       - name: Validate required secrets
         shell: bash
         run: |
