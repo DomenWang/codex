@@ -13,6 +13,8 @@ The workflow builds on a GitHub macOS 26 runner with Xcode and runs:
 xcodebuild clean build
 ```
 
+The CI build uses `xcodebuild -quiet` so failures surface Swift/Xcode diagnostics instead of thousands of module-cache lines.
+
 The runner is pinned to:
 
 ```yaml
