@@ -32,6 +32,7 @@ enum WeatherAlarmManagerError: LocalizedError {
 @available(iOS 26.0, *)
 final class AlarmManager {
     private let settingsStore: AlarmSettingsStore
+    private let statusStore: WeatherAlarmStatusStore
     private let transitService: TransitService
     private let toastPresenter: ToastPresenting
     private let systemAlarmManager: AlarmKit.AlarmManager
@@ -39,12 +40,14 @@ final class AlarmManager {
 
     init(
         settingsStore: AlarmSettingsStore = AlarmSettingsStore(),
+        statusStore: WeatherAlarmStatusStore = WeatherAlarmStatusStore(),
         transitService: TransitService? = nil,
         toastPresenter: ToastPresenting? = nil,
         systemAlarmManager: AlarmKit.AlarmManager = .shared,
         calendar: Calendar = .current
     ) {
         self.settingsStore = settingsStore
+        self.statusStore = statusStore
         self.transitService = transitService ?? TransitService(
             baseDurationProvider: {
                 let settings = try settingsStore.loadRequiredSettings()
@@ -196,6 +199,19 @@ final class AlarmManager {
         _ = try await systemAlarmManager.schedule(
             id: id,
             configuration: configuration
+        )
+
+        statusStore.save(
+            WeatherAlarmStatus(
+                generatedAt: Date(),
+                baseWakeUpDate: baseWakeUpDate,
+                scheduledWakeUpDate: scheduledWakeUpDate,
+                advanceMinutes: advanceMinutes,
+                weatherBufferMinutes: weatherBufferMinutes,
+                commuteDelayMinutes: commuteDelayMinutes,
+                weatherCondition: weatherCondition,
+                precipitationChancePercent: precipitationChance
+            )
         )
     }
 

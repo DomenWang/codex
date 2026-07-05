@@ -3,27 +3,108 @@ import SwiftUI
 @available(iOS 26.0, *)
 struct ContentView: View {
     @EnvironmentObject private var toastCenter: ToastMessageCenter
+    @StateObject private var settingsViewModel = WeatherAlarmSettingsViewModel()
+    @StateObject private var subscriptionStore = StoreKitSubscriptionStore()
+    @State private var isPaywallPresented = false
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 18) {
-                Text("Weather Alarm")
-                    .font(.largeTitle.bold())
+            List {
+                Section {
+                    HStack {
+                        Text("基础起床时间")
+                        Spacer()
+                        Text(settingsViewModel.baseWakeUpTimeText)
+                            .foregroundStyle(.secondary)
+                    }
 
-                Text("天气闹钟核心模块已接入 AlarmKit、WeatherKit、BackgroundTasks 和 TransitService。")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
+                    DatePicker(
+                        "设置起床时间",
+                        selection: $settingsViewModel.selectedWakeUpTime,
+                        displayedComponents: .hourAndMinute
+                    )
+                    .onChange(of: settingsViewModel.selectedWakeUpTime) {
+                        settingsViewModel.saveSelectedWakeUpTime()
+                    }
+                }
 
-                Text("请在设置页接入真实起床时间、通勤路线、位置权限和 API Key 后启用后台检查。")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("明日状态")
+                            .font(.headline)
 
-                Spacer()
+                        Text(settingsViewModel.tomorrowStatusText)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section {
+                    Toggle(
+                        "智能天气调整",
+                        isOn: Binding(
+                            get: {
+                                settingsViewModel.isSmartAdjustmentEnabled
+                            },
+                            set: { newValue in
+                                handleSmartAdjustmentToggle(newValue)
+                            }
+                        )
+                    )
+                } footer: {
+                    if subscriptionStore.hasPremiumAccess {
+                        Text("已解锁。后台天气检查会根据真实 WeatherKit 数据和 AlarmKit 系统闹钟调整响铃时间。")
+                    } else {
+                        Text("需要订阅后才能开启智能天气调整。")
+                    }
+                }
             }
-            .padding()
-            .navigationTitle("WeatherAlarm")
+            .navigationTitle("天气闹钟")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("订阅") {
+                        isPaywallPresented = true
+                    }
+                }
+            }
+            .sheet(isPresented: $isPaywallPresented) {
+                PaywallView(store: subscriptionStore)
+            }
+            .task {
+                await subscriptionStore.loadProductsAndEntitlements()
+            }
+            .onAppear {
+                settingsViewModel.reload()
+            }
         }
         .toast(message: $toastCenter.message)
+    }
+
+    private func handleSmartAdjustmentToggle(_ isEnabled: Bool) {
+        guard isEnabled else {
+            do {
+                try settingsViewModel.setSmartAdjustmentEnabled(false)
+            } catch {
+                toastCenter.showToast("设置保存失败")
+            }
+            return
+        }
+
+        guard settingsViewModel.settings != nil else {
+            toastCenter.showToast("请先设置基础起床时间")
+            return
+        }
+
+        guard subscriptionStore.hasPremiumAccess else {
+            isPaywallPresented = true
+            return
+        }
+
+        do {
+            try settingsViewModel.setSmartAdjustmentEnabled(true)
+        } catch {
+            toastCenter.showToast("设置保存失败")
+        }
     }
 }
 
@@ -33,4 +114,3 @@ struct ContentView: View {
             .environmentObject(ToastMessageCenter())
     }
 }
-

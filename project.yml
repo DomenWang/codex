@@ -37,7 +37,35 @@ targets:
           - fetch
     entitlements:
       path: WeatherAlarm/WeatherAlarm.entitlements
+    dependencies:
+      - target: WeatherAlarmWidget
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.domenwang.weatheralarm
         CODE_SIGN_STYLE: Automatic
+
+  WeatherAlarmWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: WeatherAlarmWidget
+      - path: outputs/WeatherAlarmCore/Models/WeatherAlarmStatus.swift
+      - path: outputs/WeatherAlarmCore/Services/Persistence/AppGroupUserDefaults.swift
+      - path: outputs/WeatherAlarmCore/Services/Persistence/WeatherAlarmStatusStore.swift
+    info:
+      path: WeatherAlarmWidget/Info.plist
+      properties:
+        CFBundleDisplayName: WeatherAlarmWidget
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: WeatherAlarmWidget/WeatherAlarmWidget.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.domenwang.weatheralarm.widget
+        CODE_SIGN_STYLE: Automatic
+        APPLICATION_EXTENSION_API_ONLY: YES

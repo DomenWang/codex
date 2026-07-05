@@ -9,20 +9,20 @@ struct AlarmSettings: Codable, Equatable {
     ///
     /// 同一个 ID 代表同一个业务闹钟。更新天气提前量时，用同一个 ID 重新 schedule，
     /// 系统就能把它当作同一个闹钟的更新，而不是每天创建一堆新闹钟。
-    let alarmID: UUID
+    var alarmID: UUID
 
     /// 用户设置的正常起床时间，只保存时分，不保存日期。
-    let wakeUpHour: Int
-    let wakeUpMinute: Int
+    var wakeUpHour: Int
+    var wakeUpMinute: Int
 
     /// 用户选择是否启用天气闹钟。
-    let isEnabled: Bool
+    var isEnabled: Bool
 
     /// 可选通勤路线。
     ///
     /// 如果用户没有配置通勤路线，AlarmManager 会跳过 TransitService，
     /// 只使用天气逻辑。这里不写死任何起点/终点。
-    let commuteRoute: CommuteRoute?
+    var commuteRoute: CommuteRoute?
 
     /// 根据“今天/明天”的日期计算下一次基础起床时间。
     /// - Parameter now: 当前时间，默认使用系统当前时间。

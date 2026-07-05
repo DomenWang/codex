@@ -18,6 +18,9 @@ Enable these capabilities on the app target:
 2. WeatherKit
 3. Background Modes
    - Background fetch
+4. In-App Purchase
+5. App Groups
+   - `group.com.domenwang.weatheralarm`
 
 ## Info.plist
 
@@ -44,3 +47,8 @@ Add:
 - TransitService failures are caught inside `AlarmManager`; the app falls back to weather-only alarm adjustment and publishes the Toast message `路况检测失败`.
 - SwiftUI screens should listen to `ToastMessageCenter` and use `toast(message:)`. Do not call `TransitService` directly from a View.
 - Keep `com.domenwang.weatheralarm.daily-weather-refresh` identical in code, Info.plist, and `project.yml`.
+- StoreKit 2 product IDs must be created in App Store Connect before purchases can succeed:
+  - `com.domenwang.weatheralarm.pro.monthly`
+  - `com.domenwang.weatheralarm.pro.yearly`
+  - `com.domenwang.weatheralarm.pro.lifetime`
+- The Widget reads the latest real weather-alarm status from the App Group. It does not call WeatherKit, TransitService, or AlarmKit by itself.

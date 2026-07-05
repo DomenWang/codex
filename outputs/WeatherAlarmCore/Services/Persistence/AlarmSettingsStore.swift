@@ -30,9 +30,17 @@ final class AlarmSettingsStore {
     }
 
     func loadRequiredSettings() throws -> AlarmSettings {
-        guard let data = userDefaults.data(forKey: Keys.alarmSettings) else {
+        guard let settings = try loadSettings() else {
             // TODO: 在设置页引导用户选择真实起床时间后再保存 AlarmSettings。
             throw AlarmSettingsStoreError.missingAlarmSettings
+        }
+
+        return settings
+    }
+
+    func loadSettings() throws -> AlarmSettings? {
+        guard let data = userDefaults.data(forKey: Keys.alarmSettings) else {
+            return nil
         }
 
         let settings = try JSONDecoder().decode(AlarmSettings.self, from: data)
@@ -48,5 +56,28 @@ final class AlarmSettingsStore {
         let data = try JSONEncoder().encode(settings)
         userDefaults.set(data, forKey: Keys.alarmSettings)
     }
+
+    func saveWakeUpTime(hour: Int, minute: Int) throws -> AlarmSettings {
+        var settings = try loadSettings() ?? AlarmSettings(
+            alarmID: UUID(),
+            wakeUpHour: hour,
+            wakeUpMinute: minute,
+            isEnabled: false,
+            commuteRoute: nil
+        )
+
+        settings.wakeUpHour = hour
+        settings.wakeUpMinute = minute
+        try save(settings)
+        return settings
+    }
+
+    func setSmartAdjustmentEnabled(_ isEnabled: Bool) throws -> AlarmSettings {
+        var settings = try loadRequiredSettings()
+        settings.isEnabled = isEnabled
+        try save(settings)
+        return settings
+    }
 }
+
 
