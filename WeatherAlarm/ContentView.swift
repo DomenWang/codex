@@ -30,13 +30,91 @@ struct ContentView: View {
 
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("明日状态")
+                        Text("明日天气")
                             .font(.headline)
 
-                        Text(settingsViewModel.tomorrowStatusText)
+                        Text(settingsViewModel.tomorrowWeatherText)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.vertical, 4)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("建议闹钟时间")
+                            .font(.headline)
+
+                        Text(settingsViewModel.suggestedAlarmTimeText)
+                            .foregroundStyle(.secondary)
+
+                        Text(settingsViewModel.tomorrowStatusText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section {
+                    Stepper(
+                        "下雨提前 \(settingsViewModel.rainAdvanceMinutes) 分钟",
+                        value: $settingsViewModel.rainAdvanceMinutes,
+                        in: 0...90,
+                        step: 5
+                    )
+                    .onChange(of: settingsViewModel.rainAdvanceMinutes) {
+                        settingsViewModel.saveWeatherAdjustmentSettings()
+                    }
+
+                    Stepper(
+                        "强降水提前 \(settingsViewModel.heavyRainAdvanceMinutes) 分钟",
+                        value: $settingsViewModel.heavyRainAdvanceMinutes,
+                        in: settingsViewModel.rainAdvanceMinutes...120,
+                        step: 5
+                    )
+                    .onChange(of: settingsViewModel.heavyRainAdvanceMinutes) {
+                        settingsViewModel.saveWeatherAdjustmentSettings()
+                    }
+                } footer: {
+                    Text("实际是否提前仍由 WeatherKit 的真实明日降水概率决定。")
+                }
+
+                Section {
+                    TextField("出发地，例如：北京市朝阳区望京SOHO", text: $settingsViewModel.commuteStartAddress)
+                        .textInputAutocapitalization(.never)
+
+                    TextField("目的地，例如：北京市海淀区中关村", text: $settingsViewModel.commuteEndAddress)
+                        .textInputAutocapitalization(.never)
+
+                    Button {
+                        Task {
+                            await settingsViewModel.syncCommuteRouteWithAMap()
+                        }
+                    } label: {
+                        HStack {
+                            Text("同步高德通勤路线")
+
+                            if settingsViewModel.isSyncingCommuteRoute {
+                                Spacer()
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(settingsViewModel.isSyncingCommuteRoute)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("当前路线")
+                            .font(.headline)
+
+                        Text(settingsViewModel.commuteRouteText)
+                            .foregroundStyle(.secondary)
+
+                        if let message = settingsViewModel.commuteSyncMessage {
+                            Text(message)
+                                .font(.caption)
+                                .foregroundStyle(message.contains("失败") ? .red : .secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } footer: {
+                    Text("路线同步会调用高德地理编码和驾车路径规划 API；API Key 未配置或网络失败时不会保存假路线。")
                 }
 
                 Section {

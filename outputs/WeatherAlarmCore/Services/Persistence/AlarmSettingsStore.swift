@@ -63,7 +63,8 @@ final class AlarmSettingsStore {
             wakeUpHour: hour,
             wakeUpMinute: minute,
             isEnabled: false,
-            commuteRoute: nil
+            commuteRoute: nil,
+            weatherAdjustmentSettings: .default
         )
 
         settings.wakeUpHour = hour
@@ -75,6 +76,20 @@ final class AlarmSettingsStore {
     func setSmartAdjustmentEnabled(_ isEnabled: Bool) throws -> AlarmSettings {
         var settings = try loadRequiredSettings()
         settings.isEnabled = isEnabled
+        try save(settings)
+        return settings
+    }
+
+    func saveWeatherAdjustmentSettings(_ adjustmentSettings: WeatherAdjustmentSettings) throws -> AlarmSettings {
+        var settings = try loadRequiredSettings()
+        settings.weatherAdjustmentSettings = adjustmentSettings
+        try save(settings)
+        return settings
+    }
+
+    func saveCommuteRoute(_ route: CommuteRoute) throws -> AlarmSettings {
+        var settings = try loadRequiredSettings()
+        settings.commuteRoute = route
         try save(settings)
         return settings
     }

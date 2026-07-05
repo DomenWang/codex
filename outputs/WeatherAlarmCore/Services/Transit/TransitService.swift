@@ -21,6 +21,23 @@ struct AMapPath: Codable {
     let distance: String
 }
 
+struct AMapGeocodeResponse: Codable {
+    let status: String
+    let info: String
+    let geocodes: [AMapGeocode]?
+}
+
+struct AMapGeocode: Codable {
+    /// 高德返回格式为 "longitude,latitude"，坐标系为 GCJ-02。
+    let location: String
+    let formattedAddress: String?
+
+    enum CodingKeys: String, CodingKey {
+        case location
+        case formattedAddress = "formatted_address"
+    }
+}
+
 // MARK: - 路况领域模型
 
 enum TrafficLevel {
@@ -44,6 +61,7 @@ enum TransitServiceError: LocalizedError {
     case missingAPIKey
     case missingBaseDuration
     case missingRoute
+    case missingGeocodeResult
     case invalidAPIResponse(String)
 
     var errorDescription: String? {
@@ -54,6 +72,8 @@ enum TransitServiceError: LocalizedError {
             return "Base commute duration is missing."
         case .missingRoute:
             return "AMap did not return a usable route."
+        case .missingGeocodeResult:
+            return "AMap did not return a usable geocode result."
         case .invalidAPIResponse(let info):
             return info
         }
@@ -98,6 +118,132 @@ final class TransitService {
         let amapStart = CoordinateTransformer.transformToGCJ(from: start)
         let amapEnd = CoordinateTransformer.transformToGCJ(from: end)
 
+        let realDuration = try await fetchDrivingDuration(
+            amapStart: amapStart,
+            amapEnd: amapEnd
+        )
+
+        let baseDuration = try baseDurationProvider()
+
+        let trafficLevel = Self.trafficLevel(
+            realDuration: realDuration,
+            baseDuration: baseDuration
+        )
+
+        return CommuteResult(
+            baseDuration: baseDuration,
+            realDuration: realDuration,
+            trafficLevel: trafficLevel
+        )
+    }
+
+    /// 根据已保存的通勤路线计算实时通勤。
+    ///
+    /// 如果路线来自高德地理编码，坐标已经是 GCJ-02，不会再次偏移。
+    func calculateCommute(route: CommuteRoute) async throws -> CommuteResult {
+        guard !apiKey.contains("YOUR_") else {
+            throw TransitServiceError.missingAPIKey
+        }
+
+        let start = route.startCoordinate
+        let end = route.endCoordinate
+        let amapStart: CLLocationCoordinate2D
+        let amapEnd: CLLocationCoordinate2D
+
+        if route.coordinateSystem == "gcj02" {
+            amapStart = start
+            amapEnd = end
+        } else {
+            amapStart = CoordinateTransformer.transformToGCJ(from: start)
+            amapEnd = CoordinateTransformer.transformToGCJ(from: end)
+        }
+
+        let realDuration = try await fetchDrivingDuration(
+            amapStart: amapStart,
+            amapEnd: amapEnd
+        )
+
+        let trafficLevel = Self.trafficLevel(
+            realDuration: realDuration,
+            baseDuration: route.baseDurationSeconds
+        )
+
+        return CommuteResult(
+            baseDuration: route.baseDurationSeconds,
+            realDuration: realDuration,
+            trafficLevel: trafficLevel
+        )
+    }
+
+    /// 将用户输入的出发地/目的地同步到高德地图 API。
+    ///
+    /// 成功后返回可保存的通勤路线，包含：
+    /// - 高德解析出的真实坐标。
+    /// - 首次路线规划得到的基础通勤时长。
+    ///
+    /// 不使用默认地址，不伪造路线。
+    func syncCommuteRoute(
+        startAddress: String,
+        endAddress: String
+    ) async throws -> CommuteRoute {
+        guard !apiKey.contains("YOUR_") else {
+            throw TransitServiceError.missingAPIKey
+        }
+
+        let start = try await geocode(address: startAddress)
+        let end = try await geocode(address: endAddress)
+        let baseDuration = try await fetchDrivingDuration(
+            amapStart: start.coordinate,
+            amapEnd: end.coordinate
+        )
+
+        return CommuteRoute(
+            startName: start.name,
+            startLatitude: start.coordinate.latitude,
+            startLongitude: start.coordinate.longitude,
+            endName: end.name,
+            endLatitude: end.coordinate.latitude,
+            endLongitude: end.coordinate.longitude,
+            baseDurationSeconds: baseDuration,
+            coordinateSystem: "gcj02"
+        )
+    }
+
+    private func geocode(address: String) async throws -> (name: String, coordinate: CLLocationCoordinate2D) {
+        var components = URLComponents(string: "https://restapi.amap.com/v3/geocode/geo")
+        components?.queryItems = [
+            URLQueryItem(name: "address", value: address),
+            URLQueryItem(name: "key", value: apiKey)
+        ]
+
+        guard let url = components?.url else {
+            throw URLError(.badURL)
+        }
+
+        let (data, response) = try await session.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+
+        let result = try JSONDecoder().decode(AMapGeocodeResponse.self, from: data)
+        guard result.status == "1" else {
+            throw TransitServiceError.invalidAPIResponse(result.info)
+        }
+
+        guard let geocode = result.geocodes?.first,
+              let coordinate = Self.parseAMapCoordinate(geocode.location) else {
+            throw TransitServiceError.missingGeocodeResult
+        }
+
+        return (geocode.formattedAddress ?? address, coordinate)
+    }
+
+    private func fetchDrivingDuration(
+        amapStart: CLLocationCoordinate2D,
+        amapEnd: CLLocationCoordinate2D
+    ) async throws -> TimeInterval {
         let origin = "\(amapStart.longitude),\(amapStart.latitude)"
         let destination = "\(amapEnd.longitude),\(amapEnd.latitude)"
         let urlString = "https://restapi.amap.com/v3/direction/driving?origin=\(origin)&destination=\(destination)&extensions=base&strategy=0&key=\(apiKey)"
@@ -114,28 +260,25 @@ final class TransitService {
         }
 
         let result = try JSONDecoder().decode(AMapRouteResponse.self, from: data)
-
         guard result.status == "1" else {
             throw TransitServiceError.invalidAPIResponse(result.info)
         }
 
         guard let path = result.route?.paths?.first,
-              let realDuration = Double(path.duration) else {
+              let duration = Double(path.duration) else {
             throw TransitServiceError.missingRoute
         }
 
-        let baseDuration = try baseDurationProvider()
+        return duration
+    }
 
-        let trafficLevel = Self.trafficLevel(
-            realDuration: realDuration,
-            baseDuration: baseDuration
-        )
+    private static func parseAMapCoordinate(_ location: String) -> CLLocationCoordinate2D? {
+        let parts = location.split(separator: ",").compactMap { Double(String($0)) }
+        guard parts.count == 2 else {
+            return nil
+        }
 
-        return CommuteResult(
-            baseDuration: baseDuration,
-            realDuration: realDuration,
-            trafficLevel: trafficLevel
-        )
+        return CLLocationCoordinate2D(latitude: parts[1], longitude: parts[0])
     }
 
     private static func trafficLevel(

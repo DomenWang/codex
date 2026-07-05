@@ -24,6 +24,15 @@ struct AlarmSettings: Codable, Equatable {
     /// 只使用天气逻辑。这里不写死任何起点/终点。
     var commuteRoute: CommuteRoute?
 
+    /// 用户可配置的雨天提前规则。
+    ///
+    /// 旧版本数据没有这个字段时，业务层会使用 `WeatherAdjustmentSettings.default`。
+    var weatherAdjustmentSettings: WeatherAdjustmentSettings?
+
+    var effectiveWeatherAdjustmentSettings: WeatherAdjustmentSettings {
+        weatherAdjustmentSettings ?? .default
+    }
+
     /// 根据“今天/明天”的日期计算下一次基础起床时间。
     /// - Parameter now: 当前时间，默认使用系统当前时间。
     /// - Returns: 下一次用户设置的起床 Date。

@@ -101,14 +101,10 @@ final class AlarmManager {
             throw WeatherAlarmManagerError.cannotBuildBaseWakeUpDate
         }
 
-        let weatherBuffer: Int
-        if precipitationChance > 60 {
-            weatherBuffer = 40
-        } else if precipitationChance > 30 {
-            weatherBuffer = 20
-        } else {
-            weatherBuffer = 0
-        }
+        let weatherBuffer = settings.effectiveWeatherAdjustmentSettings.weatherBufferMinutes(
+            weatherCondition: weatherCondition,
+            precipitationChancePercent: precipitationChance
+        )
 
         let commuteDelayMinutes = await calculateCommuteDelayMinutesIfPossible(
             from: settings.commuteRoute
@@ -232,10 +228,7 @@ final class AlarmManager {
         }
 
         do {
-            let commuteResult = try await transitService.calculateCommute(
-                start: commuteRoute.startCoordinate,
-                end: commuteRoute.endCoordinate
-            )
+            let commuteResult = try await transitService.calculateCommute(route: commuteRoute)
 
             let delaySeconds = max(
                 0,
