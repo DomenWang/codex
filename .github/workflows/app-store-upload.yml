@@ -18,7 +18,7 @@ env:
 jobs:
   archive-and-upload:
     name: Archive and Upload IPA
-    runs-on: macos-latest
+    runs-on: macos-26
 
     steps:
       - name: Checkout
@@ -28,7 +28,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          if [[ -d /Applications/Xcode_26.5.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_26.5.app/Contents/Developer
+          else
+            sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          fi
           xcodebuild -version
           xcodebuild -showsdks
 

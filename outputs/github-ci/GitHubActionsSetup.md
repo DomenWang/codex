@@ -7,11 +7,19 @@ I added:
 .github/workflows/app-store-upload.yml
 ```
 
-The workflow builds on a GitHub macOS runner with Xcode and runs:
+The workflow builds on a GitHub macOS 26 runner with Xcode and runs:
 
 ```bash
 xcodebuild clean build
 ```
+
+The runner is pinned to:
+
+```yaml
+runs-on: macos-26
+```
+
+The workflow prefers `/Applications/Xcode_26.5.app` when available, because the app requires iOS 26 AlarmKit.
 
 Simulator builds use:
 
