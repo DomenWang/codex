@@ -44,6 +44,7 @@ jobs:
               exit 1
             fi
 
+            brew untap aws/tap || true
             brew install xcodegen
             xcodegen generate --spec project.yml
           fi
