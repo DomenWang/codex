@@ -93,5 +93,8 @@ jobs:
         run: |
           set -euo pipefail
           while IFS= read -r -d '' file; do
-            swift -frontend -parse "${file}" || exit 1
+            if ! swift -frontend -parse "${file}"; then
+              echo "::error::Swift syntax validation failed for ${file}"
+              exit 1
+            fi
           done < <(find outputs/WeatherAlarmCore -name "*.swift" -print0)
