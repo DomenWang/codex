@@ -1,0 +1,83 @@
+name: iOS Build
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+env:
+  # Change these after you create the real Xcode project, if needed.
+  XCODE_PROJECT: WeatherAlarm.xcodeproj
+  XCODE_WORKSPACE: ""
+  SCHEME: WeatherAlarm
+  DESTINATION: platform=iOS Simulator,name=iPhone 16
+
+jobs:
+  build:
+    name: Build WeatherAlarm
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+          xcrun simctl list devices available
+
+      - name: Validate Xcode project
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${XCODE_WORKSPACE}" ]]; then
+            if [[ ! -d "${XCODE_WORKSPACE}" ]]; then
+              echo "::error::XCODE_WORKSPACE is set to '${XCODE_WORKSPACE}', but that directory does not exist."
+              exit 1
+            fi
+          else
+            if [[ ! -d "${XCODE_PROJECT}" ]]; then
+              echo "::error::Missing ${XCODE_PROJECT}. Create an iOS App project in Xcode, add the WeatherAlarmCore sources to the app target, then commit the .xcodeproj."
+              exit 1
+            fi
+          fi
+
+      - name: List schemes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${XCODE_WORKSPACE}" ]]; then
+            xcodebuild -list -workspace "${XCODE_WORKSPACE}"
+          else
+            xcodebuild -list -project "${XCODE_PROJECT}"
+          fi
+
+      - name: Build for iOS Simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -n "${XCODE_WORKSPACE}" ]]; then
+            xcodebuild \
+              -workspace "${XCODE_WORKSPACE}" \
+              -scheme "${SCHEME}" \
+              -destination "${DESTINATION}" \
+              CODE_SIGNING_ALLOWED=NO \
+              clean build
+          else
+            xcodebuild \
+              -project "${XCODE_PROJECT}" \
+              -scheme "${SCHEME}" \
+              -destination "${DESTINATION}" \
+              CODE_SIGNING_ALLOWED=NO \
+              clean build
+          fi
+
