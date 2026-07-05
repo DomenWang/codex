@@ -31,12 +31,12 @@ final class WeatherAlarmBackgroundScheduler {
 
     init(
         weatherService: WeatherService = WeatherService(),
-        alarmManager: AlarmManager = AlarmManager(),
+        alarmManager: AlarmManager? = nil,
         calendar: Calendar = .current,
         locationProvider: @escaping () async throws -> CLLocation
     ) {
         self.weatherService = weatherService
-        self.alarmManager = alarmManager
+        self.alarmManager = alarmManager ?? AlarmManager()
         self.calendar = calendar
         self.locationProvider = locationProvider
     }
