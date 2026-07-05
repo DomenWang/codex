@@ -19,6 +19,8 @@ enum WeatherAlarmBackgroundError: LocalizedError {
 /// 使用 BGAppRefreshTask 的原因是：这个任务适合“短时间刷新数据并更新状态”的场景。
 /// 但 iOS 不保证精确 03:00 执行；`earliestBeginDate` 表示“最早可以开始”，
 /// 实际唤醒时间由系统根据电量、网络、用户使用习惯等因素决定。
+@MainActor
+@available(iOS 26.0, *)
 final class WeatherAlarmBackgroundScheduler {
     static let taskIdentifier = "com.domenwang.weatheralarm.daily-weather-refresh"
 

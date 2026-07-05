@@ -6,6 +6,7 @@ import Foundation
 /// 这不是 Mock：`locationProvider` 必须接入你自己的真实定位服务，
 /// 例如 CLLocationManager 保存的最近一次授权位置。
 @MainActor
+@available(iOS 26.0, *)
 final class WeatherAlarmAppBootstrap {
     private let backgroundScheduler: WeatherAlarmBackgroundScheduler
 
