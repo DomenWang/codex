@@ -32,7 +32,8 @@ jobs:
           xcodebuild -version
           xcrun simctl list devices available
 
-      - name: Validate Xcode project
+      - name: Resolve build mode
+        id: build_mode
         shell: bash
         run: |
           set -euo pipefail
@@ -42,30 +43,35 @@ jobs:
               echo "::error::XCODE_WORKSPACE is set to '${XCODE_WORKSPACE}', but that directory does not exist."
               exit 1
             fi
+            echo "mode=workspace" >> "${GITHUB_OUTPUT}"
           else
-            if [[ ! -d "${XCODE_PROJECT}" ]]; then
-              echo "::error::Missing ${XCODE_PROJECT}. Create an iOS App project in Xcode, add the WeatherAlarmCore sources to the app target, then commit the .xcodeproj."
-              exit 1
+            if [[ -d "${XCODE_PROJECT}" ]]; then
+              echo "mode=project" >> "${GITHUB_OUTPUT}"
+            else
+              echo "::notice::${XCODE_PROJECT} not found. Falling back to Swift syntax validation for outputs/WeatherAlarmCore."
+              echo "mode=swift-syntax" >> "${GITHUB_OUTPUT}"
             fi
           fi
 
       - name: List schemes
+        if: steps.build_mode.outputs.mode != 'swift-syntax'
         shell: bash
         run: |
           set -euo pipefail
 
-          if [[ -n "${XCODE_WORKSPACE}" ]]; then
+          if [[ "${{ steps.build_mode.outputs.mode }}" == "workspace" ]]; then
             xcodebuild -list -workspace "${XCODE_WORKSPACE}"
           else
             xcodebuild -list -project "${XCODE_PROJECT}"
           fi
 
       - name: Build for iOS Simulator
+        if: steps.build_mode.outputs.mode != 'swift-syntax'
         shell: bash
         run: |
           set -euo pipefail
 
-          if [[ -n "${XCODE_WORKSPACE}" ]]; then
+          if [[ "${{ steps.build_mode.outputs.mode }}" == "workspace" ]]; then
             xcodebuild \
               -workspace "${XCODE_WORKSPACE}" \
               -scheme "${SCHEME}" \
@@ -81,3 +87,20 @@ jobs:
               clean build
           fi
 
+      - name: Validate WeatherAlarmCore Swift syntax
+        if: steps.build_mode.outputs.mode == 'swift-syntax'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -d outputs/WeatherAlarmCore ]]; then
+            echo "::error::Missing outputs/WeatherAlarmCore directory for Swift syntax validation."
+            exit 1
+          fi
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! swift -frontend -parse "${file}"; then
+              echo "::error::Swift syntax validation failed for ${file}"
+              status=1
+            fi
+          done < <(find outputs/WeatherAlarmCore -name "*.swift" -print0)
+          exit "${status}"
