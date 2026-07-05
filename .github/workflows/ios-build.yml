@@ -92,9 +92,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          status=0
           while IFS= read -r -d '' file; do
             if ! swift -frontend -parse "${file}"; then
               echo "::error::Swift syntax validation failed for ${file}"
-              exit 1
+              status=1
             fi
           done < <(find outputs/WeatherAlarmCore -name "*.swift" -print0)
+          exit "${status}"
