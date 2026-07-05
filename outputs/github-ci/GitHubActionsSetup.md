@@ -13,6 +13,14 @@ The workflow builds on a GitHub macOS runner with Xcode and runs:
 xcodebuild clean build
 ```
 
+Simulator builds use:
+
+```text
+generic/platform=iOS Simulator
+```
+
+This avoids failures caused by GitHub runner images not having a specific simulator device name installed.
+
 `app-store-upload.yml` is a separate manual/tag workflow for:
 
 1. `xcodebuild archive`

@@ -13,7 +13,7 @@ env:
   XCODE_PROJECT: WeatherAlarm.xcodeproj
   XCODE_WORKSPACE: ""
   SCHEME: WeatherAlarm
-  DESTINATION: platform=iOS Simulator,name=iPhone 16
+  DESTINATION: generic/platform=iOS Simulator
 
 jobs:
   build:
@@ -79,6 +79,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p build-logs
 
           if [[ -n "${XCODE_WORKSPACE}" ]]; then
             xcodebuild \
@@ -86,13 +87,20 @@ jobs:
               -scheme "${SCHEME}" \
               -destination "${DESTINATION}" \
               CODE_SIGNING_ALLOWED=NO \
-              clean build
+              clean build 2>&1 | tee build-logs/xcodebuild.log
           else
             xcodebuild \
               -project "${XCODE_PROJECT}" \
               -scheme "${SCHEME}" \
               -destination "${DESTINATION}" \
               CODE_SIGNING_ALLOWED=NO \
-              clean build
+              clean build 2>&1 | tee build-logs/xcodebuild.log
           fi
 
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-logs
+          path: build-logs
+          if-no-files-found: ignore
