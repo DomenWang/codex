@@ -93,5 +93,5 @@ jobs:
         run: |
           set -euo pipefail
           while IFS= read -r -d '' file; do
-            swift -frontend -parse "${file}"
+            swift -frontend -parse "${file}" || exit 1
           done < <(find outputs/WeatherAlarmCore -name "*.swift" -print0)
