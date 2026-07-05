@@ -11,6 +11,7 @@ struct AMapRouteResponse: Codable {
 
 struct AMapRoute: Codable {
     let paths: [AMapPath]?
+    let transits: [AMapTransitPath]?
 }
 
 struct AMapPath: Codable {
@@ -19,6 +20,28 @@ struct AMapPath: Codable {
 
     /// 距离，单位：米。
     let distance: String
+}
+
+struct AMapTransitPath: Codable {
+    let duration: String
+    let walkingDistance: String?
+    let distance: String?
+
+    enum CodingKeys: String, CodingKey {
+        case duration
+        case walkingDistance = "walking_distance"
+        case distance
+    }
+}
+
+struct AMapBicyclingResponse: Codable {
+    let errcode: Int?
+    let errmsg: String?
+    let data: AMapBicyclingData?
+}
+
+struct AMapBicyclingData: Codable {
+    let paths: [AMapPath]?
 }
 
 struct AMapGeocodeResponse: Codable {
@@ -54,6 +77,9 @@ struct CommuteResult {
     /// 实时通勤时长，单位：秒。
     let realDuration: TimeInterval
 
+    /// 高德返回路线距离，单位：米。
+    let distanceMeters: Double?
+
     let trafficLevel: TrafficLevel
 }
 
@@ -62,6 +88,7 @@ enum TransitServiceError: LocalizedError {
     case missingBaseDuration
     case missingRoute
     case missingGeocodeResult
+    case missingTransitCity
     case invalidAPIResponse(String)
 
     var errorDescription: String? {
@@ -74,6 +101,8 @@ enum TransitServiceError: LocalizedError {
             return "AMap did not return a usable route."
         case .missingGeocodeResult:
             return "AMap did not return a usable geocode result."
+        case .missingTransitCity:
+            return "Transit mode requires a city for AMap transit API."
         case .invalidAPIResponse(let info):
             return info
         }
@@ -118,21 +147,24 @@ final class TransitService {
         let amapStart = CoordinateTransformer.transformToGCJ(from: start)
         let amapEnd = CoordinateTransformer.transformToGCJ(from: end)
 
-        let realDuration = try await fetchDrivingDuration(
+        let metrics = try await fetchRouteMetrics(
+            mode: .driving,
             amapStart: amapStart,
-            amapEnd: amapEnd
+            amapEnd: amapEnd,
+            city: nil
         )
 
         let baseDuration = try baseDurationProvider()
 
         let trafficLevel = Self.trafficLevel(
-            realDuration: realDuration,
+            realDuration: metrics.duration,
             baseDuration: baseDuration
         )
 
         return CommuteResult(
             baseDuration: baseDuration,
-            realDuration: realDuration,
+            realDuration: metrics.duration,
+            distanceMeters: metrics.distance,
             trafficLevel: trafficLevel
         )
     }
@@ -158,19 +190,22 @@ final class TransitService {
             amapEnd = CoordinateTransformer.transformToGCJ(from: end)
         }
 
-        let realDuration = try await fetchDrivingDuration(
+        let metrics = try await fetchRouteMetrics(
+            mode: route.effectiveMode,
             amapStart: amapStart,
-            amapEnd: amapEnd
+            amapEnd: amapEnd,
+            city: route.city
         )
 
         let trafficLevel = Self.trafficLevel(
-            realDuration: realDuration,
+            realDuration: metrics.duration,
             baseDuration: route.baseDurationSeconds
         )
 
         return CommuteResult(
             baseDuration: route.baseDurationSeconds,
-            realDuration: realDuration,
+            realDuration: metrics.duration,
+            distanceMeters: metrics.distance ?? route.baseDistanceMeters,
             trafficLevel: trafficLevel
         )
     }
@@ -184,7 +219,9 @@ final class TransitService {
     /// 不使用默认地址，不伪造路线。
     func syncCommuteRoute(
         startAddress: String,
-        endAddress: String
+        endAddress: String,
+        mode: CommuteMode,
+        city: String?
     ) async throws -> CommuteRoute {
         guard !apiKey.contains("YOUR_") else {
             throw TransitServiceError.missingAPIKey
@@ -192,9 +229,11 @@ final class TransitService {
 
         let start = try await geocode(address: startAddress)
         let end = try await geocode(address: endAddress)
-        let baseDuration = try await fetchDrivingDuration(
+        let metrics = try await fetchRouteMetrics(
+            mode: mode,
             amapStart: start.coordinate,
-            amapEnd: end.coordinate
+            amapEnd: end.coordinate,
+            city: city
         )
 
         return CommuteRoute(
@@ -204,7 +243,10 @@ final class TransitService {
             endName: end.name,
             endLatitude: end.coordinate.latitude,
             endLongitude: end.coordinate.longitude,
-            baseDurationSeconds: baseDuration,
+            mode: mode,
+            city: city,
+            baseDurationSeconds: metrics.duration,
+            baseDistanceMeters: metrics.distance,
             coordinateSystem: "gcj02"
         )
     }
@@ -240,15 +282,70 @@ final class TransitService {
         return (geocode.formattedAddress ?? address, coordinate)
     }
 
-    private func fetchDrivingDuration(
+    private struct RouteMetrics {
+        let duration: TimeInterval
+        let distance: Double?
+    }
+
+    private func fetchRouteMetrics(
+        mode: CommuteMode,
         amapStart: CLLocationCoordinate2D,
-        amapEnd: CLLocationCoordinate2D
-    ) async throws -> TimeInterval {
+        amapEnd: CLLocationCoordinate2D,
+        city: String?
+    ) async throws -> RouteMetrics {
+        switch mode {
+        case .driving:
+            return try await fetchV3PathMetrics(
+                endpoint: "https://restapi.amap.com/v3/direction/driving",
+                amapStart: amapStart,
+                amapEnd: amapEnd,
+                extraQueryItems: [
+                    URLQueryItem(name: "extensions", value: "base"),
+                    URLQueryItem(name: "strategy", value: "0")
+                ]
+            )
+        case .walking:
+            return try await fetchV3PathMetrics(
+                endpoint: "https://restapi.amap.com/v3/direction/walking",
+                amapStart: amapStart,
+                amapEnd: amapEnd,
+                extraQueryItems: []
+            )
+        case .bicycling:
+            return try await fetchBicyclingMetrics(
+                amapStart: amapStart,
+                amapEnd: amapEnd
+            )
+        case .transit:
+            guard let city,
+                  !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw TransitServiceError.missingTransitCity
+            }
+
+            return try await fetchTransitMetrics(
+                amapStart: amapStart,
+                amapEnd: amapEnd,
+                city: city
+            )
+        }
+    }
+
+    private func fetchV3PathMetrics(
+        endpoint: String,
+        amapStart: CLLocationCoordinate2D,
+        amapEnd: CLLocationCoordinate2D,
+        extraQueryItems: [URLQueryItem]
+    ) async throws -> RouteMetrics {
         let origin = "\(amapStart.longitude),\(amapStart.latitude)"
         let destination = "\(amapEnd.longitude),\(amapEnd.latitude)"
-        let urlString = "https://restapi.amap.com/v3/direction/driving?origin=\(origin)&destination=\(destination)&extensions=base&strategy=0&key=\(apiKey)"
+        var components = URLComponents(string: endpoint)
+        components?.queryItems = [
+            URLQueryItem(name: "origin", value: origin),
+            URLQueryItem(name: "destination", value: destination),
+            URLQueryItem(name: "key", value: apiKey)
+        ] + extraQueryItems
 
-        guard let url = URL(string: urlString) else {
+        guard let url = components?.url else {
             throw URLError(.badURL)
         }
 
@@ -269,7 +366,82 @@ final class TransitService {
             throw TransitServiceError.missingRoute
         }
 
-        return duration
+        return RouteMetrics(duration: duration, distance: Double(path.distance))
+    }
+
+    private func fetchTransitMetrics(
+        amapStart: CLLocationCoordinate2D,
+        amapEnd: CLLocationCoordinate2D,
+        city: String
+    ) async throws -> RouteMetrics {
+        let origin = "\(amapStart.longitude),\(amapStart.latitude)"
+        let destination = "\(amapEnd.longitude),\(amapEnd.latitude)"
+        var components = URLComponents(string: "https://restapi.amap.com/v3/direction/transit/integrated")
+        components?.queryItems = [
+            URLQueryItem(name: "origin", value: origin),
+            URLQueryItem(name: "destination", value: destination),
+            URLQueryItem(name: "city", value: city),
+            URLQueryItem(name: "key", value: apiKey)
+        ]
+
+        guard let url = components?.url else {
+            throw URLError(.badURL)
+        }
+
+        let (data, response) = try await session.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+
+        let result = try JSONDecoder().decode(AMapRouteResponse.self, from: data)
+        guard result.status == "1" else {
+            throw TransitServiceError.invalidAPIResponse(result.info)
+        }
+
+        guard let transit = result.route?.transits?.first,
+              let duration = Double(transit.duration) else {
+            throw TransitServiceError.missingRoute
+        }
+
+        let distance = Double(transit.distance ?? "") ?? Double(transit.walkingDistance ?? "")
+        return RouteMetrics(duration: duration, distance: distance)
+    }
+
+    private func fetchBicyclingMetrics(
+        amapStart: CLLocationCoordinate2D,
+        amapEnd: CLLocationCoordinate2D
+    ) async throws -> RouteMetrics {
+        let origin = "\(amapStart.longitude),\(amapStart.latitude)"
+        let destination = "\(amapEnd.longitude),\(amapEnd.latitude)"
+        var components = URLComponents(string: "https://restapi.amap.com/v4/direction/bicycling")
+        components?.queryItems = [
+            URLQueryItem(name: "origin", value: origin),
+            URLQueryItem(name: "destination", value: destination),
+            URLQueryItem(name: "key", value: apiKey)
+        ]
+
+        guard let url = components?.url else {
+            throw URLError(.badURL)
+        }
+
+        let (data, response) = try await session.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+
+        let result = try JSONDecoder().decode(AMapBicyclingResponse.self, from: data)
+        guard result.errcode == nil || result.errcode == 0 else {
+            throw TransitServiceError.invalidAPIResponse(result.errmsg ?? "AMap bicycling API failed.")
+        }
+
+        guard let path = result.data?.paths?.first,
+              let duration = Double(path.duration) else {
+            throw TransitServiceError.missingRoute
+        }
+
+        return RouteMetrics(duration: duration, distance: Double(path.distance))
     }
 
     private static func parseAMapCoordinate(_ location: String) -> CLLocationCoordinate2D? {

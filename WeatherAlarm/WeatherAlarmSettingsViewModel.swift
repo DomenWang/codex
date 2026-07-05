@@ -11,6 +11,8 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
     @Published var heavyRainAdvanceMinutes: Int
     @Published var commuteStartAddress: String
     @Published var commuteEndAddress: String
+    @Published var commuteCity: String
+    @Published var selectedCommuteMode: CommuteMode
     @Published private(set) var commuteSyncMessage: String?
     @Published private(set) var isSyncingCommuteRoute = false
 
@@ -34,6 +36,8 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
         self.heavyRainAdvanceMinutes = WeatherAdjustmentSettings.default.heavyRainAdvanceMinutes
         self.commuteStartAddress = ""
         self.commuteEndAddress = ""
+        self.commuteCity = ""
+        self.selectedCommuteMode = .driving
         reload()
     }
 
@@ -73,7 +77,7 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
         let start = route.startName ?? "出发地"
         let end = route.endName ?? "目的地"
         let minutes = Int((route.baseDurationSeconds / 60).rounded())
-        return "\(start) → \(end)，基础约 \(minutes) 分钟"
+        return "\(route.effectiveMode.displayName)：\(start) → \(end)，基础约 \(minutes) 分钟"
     }
 
     var isSmartAdjustmentEnabled: Bool {
@@ -97,6 +101,8 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
             heavyRainAdvanceMinutes = rule.heavyRainAdvanceMinutes
             commuteStartAddress = settings.commuteRoute?.startName ?? commuteStartAddress
             commuteEndAddress = settings.commuteRoute?.endName ?? commuteEndAddress
+            commuteCity = settings.commuteRoute?.city ?? commuteCity
+            selectedCommuteMode = settings.commuteRoute?.effectiveMode ?? selectedCommuteMode
         }
     }
 
@@ -142,7 +148,9 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
         do {
             let route = try await transitService.syncCommuteRoute(
                 startAddress: commuteStartAddress,
-                endAddress: commuteEndAddress
+                endAddress: commuteEndAddress,
+                mode: selectedCommuteMode,
+                city: commuteCity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : commuteCity
             )
             settings = try settingsStore.saveCommuteRoute(route)
             commuteSyncMessage = "通勤路线已同步"

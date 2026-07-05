@@ -77,6 +77,17 @@ struct ContentView: View {
                 }
 
                 Section {
+                    Picker("通勤方式", selection: $settingsViewModel.selectedCommuteMode) {
+                        ForEach(CommuteMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+
+                    if settingsViewModel.selectedCommuteMode == .transit {
+                        TextField("公交城市，例如：北京", text: $settingsViewModel.commuteCity)
+                            .textInputAutocapitalization(.never)
+                    }
+
                     TextField("出发地，例如：北京市朝阳区望京SOHO", text: $settingsViewModel.commuteStartAddress)
                         .textInputAutocapitalization(.never)
 
@@ -114,7 +125,7 @@ struct ContentView: View {
                     }
                     .padding(.vertical, 4)
                 } footer: {
-                    Text("路线同步会调用高德地理编码和驾车路径规划 API；API Key 未配置或网络失败时不会保存假路线。")
+                    Text("路线同步会调用高德地理编码，以及驾车、公交、骑行或步行路径规划 API；雨雪会按出行方式和路线距离增加额外预留时间。API Key 未配置或网络失败时不会保存假路线。")
                 }
 
                 Section {

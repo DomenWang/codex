@@ -107,7 +107,9 @@ final class AlarmManager {
         )
 
         let commuteDelayMinutes = await calculateCommuteDelayMinutesIfPossible(
-            from: settings.commuteRoute
+            from: settings.commuteRoute,
+            weatherCondition: weatherCondition,
+            precipitationChance: precipitationChance
         )
 
         // 合并算法：
@@ -220,7 +222,9 @@ final class AlarmManager {
     ///
     /// View 不直接调用网络请求；它只负责监听 ToastMessageCenter 并展示 Toast。
     private func calculateCommuteDelayMinutesIfPossible(
-        from commuteRoute: CommuteRoute?
+        from commuteRoute: CommuteRoute?,
+        weatherCondition: String,
+        precipitationChance: Double
     ) async -> Int {
         guard let commuteRoute else {
             // TODO: 在设置页提供通勤路线配置入口。未配置路线时，只使用天气逻辑。
@@ -234,8 +238,14 @@ final class AlarmManager {
                 0,
                 commuteResult.realDuration - commuteResult.baseDuration
             )
+            let realtimeDelayMinutes = Int(ceil(delaySeconds / 60))
+            let weatherImpactMinutes = commuteRoute.effectiveMode.weatherImpactMinutes(
+                distanceMeters: commuteResult.distanceMeters,
+                weatherCondition: weatherCondition,
+                precipitationChancePercent: precipitationChance
+            )
 
-            return Int(ceil(delaySeconds / 60))
+            return realtimeDelayMinutes + weatherImpactMinutes
         } catch {
             toastPresenter.showToast("路况检测失败")
             return 0

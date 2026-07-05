@@ -53,4 +53,5 @@ Add:
   - `com.domenwang.weatheralarm.pro.lifetime`
 - The Widget reads the latest real weather-alarm status from the App Group. It does not call WeatherKit, TransitService, or AlarmKit by itself.
 - The rain advance minutes are user-configurable in the main UI, but the decision still depends on real WeatherKit precipitation probability.
-- Commute route setup calls AMap geocoding and driving direction APIs through `TransitService.syncCommuteRoute(...)`. If the AMap API key is not configured, the app shows a failure message and does not save fake route data.
+- Commute route setup calls AMap geocoding plus the selected route API through `TransitService.syncCommuteRoute(...)`: driving, public transit, bicycling, or walking. If the AMap API key is not configured, the app shows a failure message and does not save fake route data.
+- Rain/snow commute impact is mode-aware: walking and bicycling use route distance, public transit adds transfer/waiting buffer, and driving adds only severe-weather buffer because real-time traffic duration already captures most driving delay.
