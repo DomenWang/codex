@@ -16,7 +16,7 @@ xcodebuild clean build
 Simulator builds use:
 
 ```text
-generic/platform=iOS Simulator
+-sdk iphonesimulator
 ```
 
 This avoids failures caused by GitHub runner images not having a specific simulator device name installed.

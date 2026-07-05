@@ -13,7 +13,7 @@ env:
   XCODE_PROJECT: WeatherAlarm.xcodeproj
   XCODE_WORKSPACE: ""
   SCHEME: WeatherAlarm
-  DESTINATION: generic/platform=iOS Simulator
+  SDK: iphonesimulator
 
 jobs:
   build:
@@ -90,7 +90,7 @@ jobs:
             xcodebuild \
               -workspace "${XCODE_WORKSPACE}" \
               -scheme "${SCHEME}" \
-              -destination "${DESTINATION}" \
+              -sdk "${SDK}" \
               CODE_SIGNING_ALLOWED=NO \
               clean build 2>&1 | tee build-logs/xcodebuild.log
             build_status=${PIPESTATUS[0]}
@@ -100,7 +100,7 @@ jobs:
             xcodebuild \
               -project "${XCODE_PROJECT}" \
               -scheme "${SCHEME}" \
-              -destination "${DESTINATION}" \
+              -sdk "${SDK}" \
               CODE_SIGNING_ALLOWED=NO \
               clean build 2>&1 | tee build-logs/xcodebuild.log
             build_status=${PIPESTATUS[0]}
@@ -109,10 +109,10 @@ jobs:
 
           if [[ "${build_status}" -ne 0 ]]; then
             echo "::group::xcodebuild error summary"
-            grep -nE "error:|warning:|No such module|SDK|deployment target|destination|BUILD FAILED|The iOS Simulator deployment target" build-logs/xcodebuild.log || true
+            grep -nE "error:|warning:|No such module|SDKROOT|deployment target|BUILD FAILED|The iOS Simulator deployment target" build-logs/xcodebuild.log || true
             echo "::endgroup::"
 
-            summary="$(grep -nE "error:|No such module|SDK|deployment target|destination|BUILD FAILED|The iOS Simulator deployment target" build-logs/xcodebuild.log | tail -20 | sed ':a;N;$!ba;s/\n/%0A/g' || true)"
+            summary="$(grep -nE "error:|No such module|SDKROOT|deployment target|BUILD FAILED|The iOS Simulator deployment target" build-logs/xcodebuild.log | tail -20 | sed ':a;N;$!ba;s/\n/%0A/g' || true)"
             if [[ -n "${summary}" ]]; then
               echo "::error title=xcodebuild failed::${summary}"
             else
