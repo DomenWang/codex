@@ -92,6 +92,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [[ ! -d outputs/WeatherAlarmCore ]]; then
+            echo "::error::Missing outputs/WeatherAlarmCore directory for Swift syntax validation."
+            exit 1
+          fi
           status=0
           while IFS= read -r -d '' file; do
             if ! swift -frontend -parse "${file}"; then
