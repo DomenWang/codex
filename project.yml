@@ -33,6 +33,15 @@ targets:
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         NSAlarmKitUsageDescription: 根据早晨天气和路况提前您的起床闹钟。
         NSLocationWhenInUseUsageDescription: 用于获取您所在位置的真实天气预报。
         AMapWebServiceAPIKey: ae9b87a9bed26996b16ff1d016c57324
@@ -50,6 +59,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.domenx.SmartWake
         CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
   WeatherAlarmWidget:
     type: app-extension
