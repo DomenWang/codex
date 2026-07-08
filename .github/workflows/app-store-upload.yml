@@ -253,6 +253,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p build-logs
 
           ipa_path="$(find "${EXPORT_PATH}" -type f -name "*.ipa" -print -quit)"
           if [[ -z "${ipa_path}" ]]; then
@@ -260,8 +261,21 @@ jobs:
             exit 1
           fi
 
+          upload_status=0
+          set +e
           xcrun altool --upload-app \
             --type ios \
             --file "${ipa_path}" \
             --apiKey "${{ secrets.APPLE_API_KEY_ID }}" \
-            --apiIssuer "${{ secrets.APPLE_API_ISSUER_ID }}"
+            --apiIssuer "${{ secrets.APPLE_API_ISSUER_ID }}" \
+            2>&1 | tee build-logs/upload.log
+          upload_status=${PIPESTATUS[0]}
+          set -e
+
+          if [[ "${upload_status}" -ne 0 ]]; then
+            compact_tail="$(tail -300 build-logs/upload.log | sed 's/%/%25/g;s/\r/%0D/g' | tr '\n' ' ' | cut -c 1-12000 || true)"
+            if [[ -n "${compact_tail}" ]]; then
+              echo "::error title=App Store Connect upload failed::${compact_tail}"
+            fi
+            exit "${upload_status}"
+          fi
