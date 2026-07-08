@@ -99,10 +99,22 @@ jobs:
         shell: bash
         env:
           EXPORT_OPTIONS: ${{ secrets.EXPORT_OPTIONS }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           set -euo pipefail
           printf "%s" "${EXPORT_OPTIONS}" > ExportOptions.plist
+
+          /usr/libexec/PlistBuddy -c "Set :method app-store-connect" ExportOptions.plist 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :method string app-store-connect" ExportOptions.plist
+          /usr/libexec/PlistBuddy -c "Set :destination export" ExportOptions.plist 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :destination string export" ExportOptions.plist
+          /usr/libexec/PlistBuddy -c "Set :teamID ${APPLE_TEAM_ID}" ExportOptions.plist 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :teamID string ${APPLE_TEAM_ID}" ExportOptions.plist
+          /usr/libexec/PlistBuddy -c "Set :signingStyle automatic" ExportOptions.plist 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :signingStyle string automatic" ExportOptions.plist
+
           plutil -lint ExportOptions.plist
+          plutil -p ExportOptions.plist
 
       - name: Create App Store Connect private key
         shell: bash
