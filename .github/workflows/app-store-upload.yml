@@ -197,7 +197,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p build-logs
 
+          export_status=0
+          set +e
           xcodebuild -exportArchive \
             -archivePath "${ARCHIVE_PATH}" \
             -exportOptionsPlist ExportOptions.plist \
@@ -205,7 +208,25 @@ jobs:
             -allowProvisioningUpdates \
             -authenticationKeyPath "${PWD}/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8" \
             -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}" \
-            -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}"
+            -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}" \
+            2>&1 | tee build-logs/export.log
+          export_status=${PIPESTATUS[0]}
+          set -e
+
+          if [[ "${export_status}" -ne 0 ]]; then
+            echo "::group::xcodebuild export error summary"
+            grep -nE "error:|Error|failed|Failed|No profiles|No Account|Signing|Provisioning|provisioning|entitlement|Bundle identifier|requires a provisioning profile|Authentication|Team|exportArchive|IDEDistribution" build-logs/export.log || true
+            echo "--- Last 300 lines ---"
+            tail -300 build-logs/export.log || true
+            echo "::endgroup::"
+
+            compact_tail="$(tail -300 build-logs/export.log | sed 's/%/%25/g;s/\r/%0D/g' | tr '\n' ' ' | cut -c 1-12000 || true)"
+            if [[ -n "${compact_tail}" ]]; then
+              echo "::error title=xcodebuild export compact tail::${compact_tail}"
+            fi
+
+            exit "${export_status}"
+          fi
 
           ls -la "${EXPORT_PATH}"
 
