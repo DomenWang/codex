@@ -1,6 +1,7 @@
 import SwiftUI
 
 @available(iOS 26.0, *)
+@MainActor
 struct ContentView: View {
     @EnvironmentObject private var toastCenter: ToastMessageCenter
     @EnvironmentObject private var authSession: AuthSessionViewModel

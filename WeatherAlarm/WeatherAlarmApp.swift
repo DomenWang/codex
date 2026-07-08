@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 @available(iOS 26.0, *)
+@MainActor
 struct WeatherAlarmApp: App {
     @StateObject private var dependencies = WeatherAlarmDependencies()
     @StateObject private var authSession = AuthSessionViewModel()
