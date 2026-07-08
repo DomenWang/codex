@@ -76,6 +76,30 @@ final class AlarmManager {
         }
     }
 
+    /// 保底注册用户设置的基础起床闹钟。
+    ///
+    /// 这一步不依赖 WeatherKit、StoreKit、登录态或高德 API。后台任务应该先确保
+    /// 基础闹钟存在，再尝试追加“提前响铃”的智能逻辑。
+    func ensureBasicAlarmRegistered() async throws {
+        let settings = try settingsStore.loadRequiredSettings()
+        let baseWakeUpDate = settings.nextBaseWakeUpDate(calendar: calendar)
+
+        guard let baseWakeUpDate else {
+            throw WeatherAlarmManagerError.cannotBuildBaseWakeUpDate
+        }
+
+        try await scheduleWeatherAlarm(
+            id: settings.alarmID,
+            baseWakeUpDate: baseWakeUpDate,
+            scheduledWakeUpDate: baseWakeUpDate,
+            advanceMinutes: 0,
+            weatherBufferMinutes: 0,
+            commuteDelayMinutes: 0,
+            weatherCondition: "基础闹钟",
+            precipitationChance: 0
+        )
+    }
+
     /// 根据天气更新闹钟。
     ///
     /// - Parameters:
@@ -106,11 +130,16 @@ final class AlarmManager {
             precipitationChancePercent: precipitationChance
         )
 
-        let commuteDelayMinutes = await calculateCommuteDelayMinutesIfPossible(
-            from: settings.commuteRoute,
-            weatherCondition: weatherCondition,
-            precipitationChance: precipitationChance
-        )
+        let commuteDelayMinutes: Int
+        if settings.effectiveIsCommuteAdjustmentEnabled {
+            commuteDelayMinutes = await calculateCommuteDelayMinutesIfPossible(
+                from: settings.commuteRoute,
+                weatherCondition: weatherCondition,
+                precipitationChance: precipitationChance
+            )
+        } else {
+            commuteDelayMinutes = 0
+        }
 
         // 合并算法：
         // 最终闹钟提前量 = (CommuteResult.realDuration - CommuteResult.baseDuration) / 60 + WeatherBuffer

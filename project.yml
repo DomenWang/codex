@@ -1,7 +1,7 @@
 name: WeatherAlarm
 
 options:
-  bundleIdPrefix: com.domenwang
+  bundleIdPrefix: com.domenx
   deploymentTarget:
     iOS: "26.0"
 
@@ -23,16 +23,22 @@ targets:
     info:
       path: WeatherAlarm/Info.plist
       properties:
-        CFBundleDisplayName: WeatherAlarm
+        CFBundleDisplayName: SmartWake
         CFBundleShortVersionString: "1.0"
         CFBundleVersion: "1"
+        CFBundleURLTypes:
+          - CFBundleURLName: weatherwake.invite
+            CFBundleURLSchemes:
+              - weatherwake
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         NSAlarmKitUsageDescription: 根据早晨天气和路况提前您的起床闹钟。
         NSLocationWhenInUseUsageDescription: 用于获取您所在位置的真实天气预报。
+        AMapWebServiceAPIKey: ae9b87a9bed26996b16ff1d016c57324
+        AuthAPIBaseURL: https://domenwang-weather-alarm-auth.onrender.com
         BGTaskSchedulerPermittedIdentifiers:
-          - com.domenwang.weatheralarm.daily-weather-refresh
+          - com.domenx.SmartWake.daily-weather-refresh
         UIBackgroundModes:
           - fetch
     entitlements:
@@ -42,7 +48,7 @@ targets:
         embed: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.domenwang.weatheralarm
+        PRODUCT_BUNDLE_IDENTIFIER: com.domenx.SmartWake
         CODE_SIGN_STYLE: Automatic
 
   WeatherAlarmWidget:
@@ -66,6 +72,6 @@ targets:
       path: WeatherAlarmWidget/WeatherAlarmWidget.entitlements
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.domenwang.weatheralarm.widget
+        PRODUCT_BUNDLE_IDENTIFIER: com.domenx.SmartWake.widget
         CODE_SIGN_STYLE: Automatic
         APPLICATION_EXTENSION_API_ONLY: YES

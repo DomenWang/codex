@@ -12,7 +12,7 @@ env:
   XCODE_WORKSPACE: ""
   SCHEME: WeatherAlarm
   CONFIGURATION: Release
-  ARCHIVE_PATH: build/WeatherAlarm.xcarchive
+  ARCHIVE_PATH: build/SmartWake.xcarchive
   EXPORT_PATH: build/export
 
 jobs:
@@ -62,6 +62,7 @@ jobs:
             "APPLE_API_KEY_BASE64"
             "APPLE_API_KEY_ID"
             "APPLE_API_ISSUER_ID"
+            "APPLE_TEAM_ID"
           )
 
           for secret_name in "${required_secrets[@]}"; do
@@ -75,6 +76,7 @@ jobs:
           APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Validate Xcode project
         shell: bash
@@ -138,6 +140,7 @@ jobs:
             -authenticationKeyPath "${PWD}/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8"
             -authenticationKeyID "${{ secrets.APPLE_API_KEY_ID }}"
             -authenticationKeyIssuerID "${{ secrets.APPLE_API_ISSUER_ID }}"
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}"
             archive
           )
 
@@ -166,7 +169,7 @@ jobs:
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v6
         with:
-          name: WeatherAlarm-ipa
+          name: SmartWake-ipa
           path: ${{ env.EXPORT_PATH }}/*.ipa
           if-no-files-found: error
 

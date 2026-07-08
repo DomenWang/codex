@@ -18,6 +18,11 @@ struct AlarmSettings: Codable, Equatable {
     /// 用户选择是否启用天气闹钟。
     var isEnabled: Bool
 
+    /// 用户选择是否让地图/通勤耗时参与闹钟提前量。
+    ///
+    /// 旧版本数据没有这个字段时默认关闭，避免在用户未明确开启前使用通勤路线影响闹钟时间。
+    var isCommuteAdjustmentEnabled: Bool?
+
     /// 可选通勤路线。
     ///
     /// 如果用户没有配置通勤路线，AlarmManager 会跳过 TransitService，
@@ -31,6 +36,10 @@ struct AlarmSettings: Codable, Equatable {
 
     var effectiveWeatherAdjustmentSettings: WeatherAdjustmentSettings {
         weatherAdjustmentSettings ?? .default
+    }
+
+    var effectiveIsCommuteAdjustmentEnabled: Bool {
+        isCommuteAdjustmentEnabled ?? false
     }
 
     /// 根据“今天/明天”的日期计算下一次基础起床时间。

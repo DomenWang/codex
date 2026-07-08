@@ -18,7 +18,7 @@ final class WeatherAlarmAppBootstrap {
         backgroundScheduler.register()
 
         do {
-            try backgroundScheduler.scheduleNextDaily3AMRefresh()
+            try backgroundScheduler.scheduleNextDaily5AMRefresh()
         } catch {
             // TODO: 将后台任务提交失败写入 App 内诊断日志，方便用户检查 Background Modes 配置。
         }

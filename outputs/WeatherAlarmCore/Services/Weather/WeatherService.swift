@@ -76,7 +76,7 @@ final class WeatherService {
 
     /// 找到未来 24 小时内的下一段 6:00-9:00。
     ///
-    /// 每日后台任务配置为“最早 03:00 执行”，正常情况下会解析当天 6:00-9:00。
+    /// 每日后台任务配置为“最早 05:00 执行”，正常情况下会解析当天 6:00-9:00。
     /// 如果系统晚些时候才唤醒 App，而当天窗口已经过去，则会尝试明天 6:00-9:00；
     /// 若该窗口不在未来 24 小时内，则抛错，避免使用不完整数据。
     private func nextMorningWindowWithin24Hours(after now: Date) throws -> (start: Date, end: Date) {

@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: domenwang-weather-alarm-auth
+    runtime: node
+    rootDir: outputs/auth-backend
+    plan: free
+    buildCommand: npm ci && npm run build
+    preDeployCommand: npm run migrate:prod
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ISSUER
+        value: weather-alarm
+      - key: JWT_AUDIENCE
+        value: weather-alarm-ios
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_PEPPER
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        value: ""

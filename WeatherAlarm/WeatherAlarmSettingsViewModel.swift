@@ -84,6 +84,10 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
         settings?.isEnabled ?? false
     }
 
+    var isCommuteAdjustmentEnabled: Bool {
+        settings?.effectiveIsCommuteAdjustmentEnabled ?? false
+    }
+
     func reload() {
         settings = try? settingsStore.loadSettings()
         latestStatus = statusStore.loadLatestStatus()
@@ -118,6 +122,10 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
 
     func setSmartAdjustmentEnabled(_ isEnabled: Bool) throws {
         settings = try settingsStore.setSmartAdjustmentEnabled(isEnabled)
+    }
+
+    func setCommuteAdjustmentEnabled(_ isEnabled: Bool) throws {
+        settings = try settingsStore.setCommuteAdjustmentEnabled(isEnabled)
     }
 
     func saveWeatherAdjustmentSettings() {

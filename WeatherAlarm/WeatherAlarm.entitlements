@@ -6,7 +6,7 @@
          Xcode will keep this entitlements file in sync with your Apple Developer account. -->
     <key>com.apple.security.application-groups</key>
     <array>
-        <string>group.com.domenwang.weatheralarm</string>
+        <string>group.com.domenx.SmartWake</string>
     </array>
 </dict>
 </plist>

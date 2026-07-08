@@ -11,7 +11,7 @@ struct WeatherAlarmWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> WeatherAlarmWidgetEntry {
         WeatherAlarmWidgetEntry(
             date: Date(),
-            statusText: "天气闹钟状态",
+            statusText: "智能闹钟状态",
             baseWakeUpTimeText: "--:--"
         )
     }
@@ -55,7 +55,7 @@ struct WeatherAlarmWidgetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("天气闹钟状态")
+            Text("智能闹钟状态")
                 .font(.headline)
 
             Text(entry.statusText)
@@ -89,8 +89,8 @@ struct WeatherAlarmWidget: Widget {
         ) { entry in
             WeatherAlarmWidgetView(entry: entry)
         }
-        .configurationDisplayName("天气闹钟状态")
-        .description("显示天气闹钟的基础起床时间和最近一次明日状态。")
+        .configurationDisplayName("智能闹钟状态")
+        .description("显示智能闹钟的基础起床时间和最近一次明日状态。")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
@@ -102,4 +102,3 @@ private extension DateFormatter {
         return formatter
     }()
 }
-

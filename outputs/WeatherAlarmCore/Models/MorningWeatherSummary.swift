@@ -4,7 +4,7 @@ import Foundation
 ///
 /// `precipitationChancePercent` 使用 0...100 的百分比，方便直接套用
 /// “> 30 提前 20 分钟、> 60 提前 40 分钟”的产品规则。
-struct MorningWeatherSummary: Equatable {
+struct MorningWeatherSummary: Codable, Equatable {
     let weatherCondition: String
     let precipitationChancePercent: Double
     let windowStart: Date

@@ -113,21 +113,26 @@ enum TransitServiceError: LocalizedError {
 ///
 /// 这里是真实网络请求，不提供 Mock 结果。API Key 缺失、网络超时、服务端失败都会 throw。
 final class TransitService {
-    // TODO: [重要] 请在此处填入你在高德开放平台申请的 Web 服务 Key。
-    // 申请地址: https://console.amap.com/dev/key/app
-    private let apiKey = "YOUR_AMAP_WEB_API_KEY_HERE"
+    private let apiKey: String
 
     private let session: URLSession
     private let baseDurationProvider: () throws -> TimeInterval
 
     init(
         session: URLSession = .shared,
+        apiKey: String = Bundle.main.object(forInfoDictionaryKey: "AMapWebServiceAPIKey") as? String ?? "",
         baseDurationProvider: @escaping () throws -> TimeInterval = {
             throw TransitServiceError.missingBaseDuration
         }
     ) {
         self.session = session
+        self.apiKey = apiKey
         self.baseDurationProvider = baseDurationProvider
+    }
+
+    private var hasConfiguredAPIKey: Bool {
+        !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !apiKey.contains("YOUR_")
     }
 
     /// 计算两点之间的实时通勤时间。
@@ -140,7 +145,7 @@ final class TransitService {
         start: CLLocationCoordinate2D,
         end: CLLocationCoordinate2D
     ) async throws -> CommuteResult {
-        guard !apiKey.contains("YOUR_") else {
+        guard hasConfiguredAPIKey else {
             throw TransitServiceError.missingAPIKey
         }
 
@@ -173,7 +178,7 @@ final class TransitService {
     ///
     /// 如果路线来自高德地理编码，坐标已经是 GCJ-02，不会再次偏移。
     func calculateCommute(route: CommuteRoute) async throws -> CommuteResult {
-        guard !apiKey.contains("YOUR_") else {
+        guard hasConfiguredAPIKey else {
             throw TransitServiceError.missingAPIKey
         }
 
@@ -223,7 +228,7 @@ final class TransitService {
         mode: CommuteMode,
         city: String?
     ) async throws -> CommuteRoute {
-        guard !apiKey.contains("YOUR_") else {
+        guard hasConfiguredAPIKey else {
             throw TransitServiceError.missingAPIKey
         }
 

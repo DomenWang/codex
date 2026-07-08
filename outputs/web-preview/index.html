@@ -1,0 +1,3808 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>智能闹钟 UI 预览</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17202a;
+      --muted: #657184;
+      --line: #d9e0ea;
+      --panel: #ffffff;
+      --soft: #f6f8fb;
+      --accent: #0f766e;
+      --accent-strong: #115e59;
+      --blue: #1d4ed8;
+      --danger: #b42318;
+      --shadow: 0 24px 70px rgba(31, 41, 55, .18);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(7, 17, 31, .46), rgba(234,239,247,.92)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1400' height='900' viewBox='0 0 1400 900'%3E%3Crect width='1400' height='900' fill='%23111d2d'/%3E%3Cpath d='M0 188c170-84 341-108 513-72 187 40 313 134 511 118 151-13 276-76 376-187v312H0z' fill='%23284658'/%3E%3Cpath d='M0 505c174-88 352-112 535-72 187 42 299 126 492 118 151-7 276-70 373-188v537H0z' fill='%23b6c9d7'/%3E%3Cpath d='M0 602c156-96 333-140 531-132 190 8 338 81 518 73 132-6 249-44 351-114v471H0z' fill='%23e7edf4'/%3E%3Ccircle cx='1120' cy='156' r='78' fill='%23f2c75b'/%3E%3Cpath d='M0 468c156-96 333-140 531-132 190 8 338 81 518 73 132-6 249-44 351-114v108c-110 72-238 105-385 98-180-9-328-77-512-77-180 1-348 52-503 153z' fill='%236fa7a0' opacity='.48'/%3E%3C/svg%3E") center/cover fixed;
+    }
+
+    .page {
+      width: min(1200px, 100%);
+      margin: 0 auto;
+      padding: 28px;
+      display: grid;
+      grid-template-columns: minmax(340px, 430px) minmax(320px, 1fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .phone {
+      position: sticky;
+      top: 24px;
+      min-height: 820px;
+      padding: 12px;
+      border-radius: 42px;
+      background: #111827;
+      box-shadow: var(--shadow);
+    }
+
+    .screen {
+      position: relative;
+      min-height: 796px;
+      max-height: 796px;
+      overflow: hidden;
+      border-radius: 32px;
+      background:
+        linear-gradient(180deg, #f9fbff, #eef5f7 44%, #f8fafc);
+    }
+
+    .statusbar {
+      height: 42px;
+      padding: 0 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .signal {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .signal span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: .78;
+    }
+
+    .app {
+      height: 754px;
+      padding: 8px 18px 24px;
+      overflow: auto;
+    }
+
+    .app::-webkit-scrollbar { width: 0; }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      font-size: 30px;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin-bottom: 12px;
+      font-size: 19px;
+      letter-spacing: 0;
+    }
+
+    .morning-hero {
+      position: relative;
+      min-height: 286px;
+      margin-bottom: 14px;
+      padding: 18px;
+      border: 1px solid rgba(120, 139, 163, .32);
+      border-radius: 8px;
+      overflow: hidden;
+      background:
+        linear-gradient(145deg, rgba(17, 31, 51, .05), rgba(255, 248, 231, .78) 36%, rgba(228, 247, 247, .92) 66%, rgba(239, 246, 255, .96)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='390' height='286' viewBox='0 0 390 286'%3E%3Crect width='390' height='286' fill='%23e8f3f5'/%3E%3Cpath d='M0 72c42-32 86-45 132-39 49 6 80 35 134 28 42-5 82-31 124-61v136H0z' fill='%2316293d' opacity='.84'/%3E%3Ccircle cx='320' cy='62' r='34' fill='%23f4c95d'/%3E%3Cpath d='M0 174c46-24 88-31 126-21 42 11 66 41 116 39 43-2 82-28 148-73v167H0z' fill='%23b8d4da' opacity='.58'/%3E%3Cpath d='M0 217c58-24 112-31 161-20 49 12 77 38 128 34 34-3 65-18 101-42v97H0z' fill='%239fb9c7' opacity='.42'/%3E%3Cpath d='M22 232c52-22 94-29 126-22 42 9 69 34 111 28 38-5 68-24 106-49' stroke='%230f766e' stroke-width='7' stroke-linecap='round' fill='none' opacity='.86'/%3E%3C/svg%3E") center/cover;
+      box-shadow: 0 22px 45px rgba(31, 41, 55, .18);
+      transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+      transition: transform .16s ease, box-shadow .16s ease;
+    }
+
+    .morning-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(108deg, rgba(29, 78, 216, .16) 0 1px, transparent 1px 18px);
+      opacity: .38;
+      animation: rainDrift 7s linear infinite;
+      pointer-events: none;
+    }
+
+    .morning-hero::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 78px;
+      background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .76));
+      pointer-events: none;
+    }
+
+    .hero-copy {
+      position: relative;
+      z-index: 2;
+      max-width: 282px;
+    }
+
+    .eyebrow {
+      color: #8a5a16;
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .hero-copy h2 {
+      margin: 6px 0 8px;
+      color: #132238;
+      font-size: 31px;
+      line-height: 1.08;
+    }
+
+    .hero-copy p {
+      color: #435367;
+      font-size: 14px;
+      line-height: 1.42;
+    }
+
+    .hero-metrics {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+      margin-top: 18px;
+    }
+
+    .hero-metric {
+      min-height: 62px;
+      padding: 9px 8px;
+      border: 1px solid rgba(255, 255, 255, .76);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .72);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 18px rgba(31, 41, 55, .08);
+    }
+
+    .hero-metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .hero-metric strong {
+      display: block;
+      margin-top: 4px;
+      color: #142033;
+      font-size: 16px;
+      line-height: 1.1;
+    }
+
+    .rain-scene {
+      position: absolute;
+      right: 12px;
+      top: 18px;
+      width: 128px;
+      height: 142px;
+      pointer-events: none;
+    }
+
+    .rain-cloud {
+      position: absolute;
+      left: 17px;
+      top: 18px;
+      width: 76px;
+      height: 34px;
+      border-radius: 28px;
+      background: #ffffff;
+      box-shadow: 0 8px 22px rgba(71, 85, 105, .18);
+    }
+
+    .rain-cloud::before,
+    .rain-cloud::after {
+      content: "";
+      position: absolute;
+      bottom: 10px;
+      border-radius: 50%;
+      background: #ffffff;
+    }
+
+    .rain-cloud::before {
+      left: 12px;
+      width: 30px;
+      height: 30px;
+    }
+
+    .rain-cloud::after {
+      right: 13px;
+      width: 38px;
+      height: 38px;
+    }
+
+    .rain-drop {
+      position: absolute;
+      top: 62px;
+      width: 3px;
+      height: 18px;
+      border-radius: 999px;
+      background: #2f80ed;
+      opacity: .72;
+      animation: rainFall 1.8s ease-in-out infinite;
+    }
+
+    .rain-drop.d1 { left: 35px; animation-delay: .1s; }
+    .rain-drop.d2 { left: 58px; height: 22px; animation-delay: .45s; }
+    .rain-drop.d3 { left: 82px; animation-delay: .8s; }
+
+    .tiny-route {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 15px;
+      height: 4px;
+      border-radius: 999px;
+      background: #0f766e;
+      transform: rotate(-12deg);
+      box-shadow: 0 0 0 5px rgba(15, 118, 110, .12);
+    }
+
+    .mood-status {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+      padding: 10px 11px;
+      border: 1px solid rgba(255, 255, 255, .72);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .68);
+      backdrop-filter: blur(14px);
+    }
+
+    .mood-status span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .mood-status strong {
+      display: block;
+      margin-top: 3px;
+      color: #132238;
+      font-size: 14px;
+      line-height: 1.28;
+    }
+
+    .pulse-ring {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2px solid rgba(15, 118, 110, .34);
+      display: grid;
+      place-items: center;
+      color: var(--accent-strong);
+      font-weight: 900;
+      animation: calmPulse 2.8s ease-in-out infinite;
+    }
+
+    .morning-script {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .script-step {
+      position: relative;
+      min-height: 72px;
+      padding: 10px 8px;
+      border: 1px solid rgba(255, 255, 255, .72);
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, .62);
+      backdrop-filter: blur(14px);
+    }
+
+    .script-step::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #0f766e;
+      animation: stepGlow 2.4s ease-in-out infinite;
+    }
+
+    .script-step:nth-child(2)::before { background: #1d4ed8; animation-delay: .35s; }
+    .script-step:nth-child(3)::before { background: #d97706; animation-delay: .7s; }
+
+    .script-step strong {
+      display: block;
+      color: #132238;
+      font-size: 17px;
+      line-height: 1;
+    }
+
+    .script-step span {
+      display: block;
+      margin-top: 7px;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .script-step small {
+      display: block;
+      margin-top: 3px;
+      color: #475569;
+      font-size: 11px;
+      line-height: 1.22;
+    }
+
+    @keyframes rainFall {
+      0%, 100% { transform: translateY(-3px); opacity: .35; }
+      50% { transform: translateY(8px); opacity: .9; }
+    }
+
+    @keyframes rainDrift {
+      from { background-position: 0 0; }
+      to { background-position: 120px 240px; }
+    }
+
+    @keyframes calmPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(15, 118, 110, .18); }
+      50% { box-shadow: 0 0 0 9px rgba(15, 118, 110, 0); }
+    }
+
+    @keyframes stepGlow {
+      0%, 100% { opacity: .42; transform: scaleY(.58); }
+      50% { opacity: 1; transform: scaleY(1); }
+    }
+
+    @keyframes weatherRise {
+      0%, 100% { transform: translateY(8px); opacity: .52; }
+      50% { transform: translateY(0); opacity: .92; }
+    }
+
+    @keyframes routeFlow {
+      from { transform: translateX(-48px); }
+      to { transform: translateX(222px); }
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    .pill-btn,
+    .icon-btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .pill-btn {
+      min-height: 38px;
+      border-radius: 19px;
+      padding: 0 14px;
+      font-weight: 750;
+      box-shadow: 0 8px 18px rgba(31, 41, 55, .08);
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+    }
+
+    .section {
+      margin-bottom: 14px;
+      border: 1px solid rgba(203, 213, 225, .84);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .82);
+      box-shadow: 0 10px 26px rgba(31, 41, 55, .08);
+      backdrop-filter: blur(12px);
+      overflow: hidden;
+    }
+
+    .row {
+      min-height: 58px;
+      padding: 13px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-bottom: 1px solid #edf0f5;
+    }
+
+    .row:last-child { border-bottom: 0; }
+
+    .row.stack {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .label {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .value,
+    .copy {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.42;
+    }
+
+    .value { white-space: nowrap; }
+
+    .primary-value {
+      color: var(--accent-strong);
+      font-size: 22px;
+      font-weight: 850;
+    }
+
+    .input,
+    .select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid rgba(203, 213, 225, .95);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: rgba(251, 252, 254, .92);
+      color: var(--ink);
+    }
+
+    .input:focus,
+    .select:focus {
+      outline: 2px solid rgba(15, 118, 110, .18);
+      border-color: rgba(15, 118, 110, .55);
+    }
+
+    .search-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .search-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .route-summary {
+      display: grid;
+      gap: 6px;
+      padding: 10px 12px;
+      border: 1px solid #dbe3ee;
+      border-radius: 8px;
+      background: #f8fbff;
+    }
+
+    .route-summary strong {
+      font-size: 15px;
+    }
+
+    .route-summary span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .time-input { width: 122px; }
+
+    .stepper {
+      display: grid;
+      grid-template-columns: 34px 1fr 34px;
+      gap: 8px;
+      align-items: center;
+      min-width: 126px;
+    }
+
+    .stepper button {
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      background: #f8fafc;
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .stepper output {
+      text-align: center;
+      font-weight: 800;
+      color: var(--accent-strong);
+    }
+
+    .toggle {
+      width: 52px;
+      height: 32px;
+      border: 0;
+      border-radius: 16px;
+      padding: 3px;
+      background: #c7cedb;
+      cursor: pointer;
+      transition: background .2s ease;
+      flex: 0 0 auto;
+    }
+
+    .toggle span {
+      display: block;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 2px 8px rgba(31, 41, 55, .22);
+      transition: transform .2s ease;
+    }
+
+    .toggle.on { background: var(--accent); }
+    .toggle.on span { transform: translateX(20px); }
+
+    .foot {
+      padding: 0 14px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .action {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid rgba(15, 118, 110, .74);
+      border-radius: 8px;
+      background: linear-gradient(135deg, #0f766e, #1d4ed8);
+      color: white;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(15, 118, 110, .2);
+    }
+
+    .action:hover {
+      filter: brightness(1.04);
+    }
+
+    .weather-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .weather-hour {
+      position: relative;
+      min-height: 82px;
+      padding: 9px 6px;
+      border: 1px solid #dbe3ee;
+      border-radius: 8px;
+      background: #f8fbff;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .weather-hour::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: var(--rain-level, 48%);
+      background: linear-gradient(180deg, rgba(96, 165, 250, 0), rgba(96, 165, 250, .18));
+      animation: weatherRise 2.8s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .weather-hour > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .weather-hour strong {
+      font-size: 13px;
+    }
+
+    .weather-symbol {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .weather-hour span:last-child {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .care-note {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      align-items: center;
+      gap: 9px;
+      min-height: 54px;
+      padding: 10px;
+      border: 1px solid #d9e8ef;
+      border-radius: 8px;
+      background: #f5fbfd;
+      color: #334155;
+      font-size: 13px;
+      line-height: 1.38;
+    }
+
+    .care-note strong {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 17px;
+      background: #e0f2fe;
+      color: #0369a1;
+      font-size: 16px;
+    }
+
+    .insight-card {
+      display: grid;
+      gap: 7px;
+      padding: 12px;
+      border: 1px solid #eadbc5;
+      border-radius: 8px;
+      background: #fff8ed;
+      color: #4a3b28;
+    }
+
+    .insight-card span {
+      color: #8a5a16;
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .insight-card p {
+      font-size: 14px;
+      line-height: 1.42;
+    }
+
+    .map-preview {
+      position: relative;
+      min-height: 190px;
+      border: 1px solid #c9d6e6;
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: crosshair;
+      background: #eef2f6;
+    }
+
+    .map-preview.saved {
+      cursor: default;
+    }
+
+    .map-preview.saved .map-hint {
+      display: none;
+    }
+
+    .main-amap-container {
+      position: absolute;
+      inset: 0;
+      background: #eef2f6;
+      pointer-events: none;
+    }
+
+    .map-pin {
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 6px 14px rgba(31, 41, 55, .24);
+      transition: left .18s ease, top .18s ease, box-shadow .18s ease;
+    }
+
+    .map-pin::after {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 50%;
+      background: white;
+    }
+
+    .map-pin.start {
+      left: 68px;
+      top: 112px;
+      background: var(--accent);
+    }
+
+    .map-pin.end {
+      left: 270px;
+      top: 36px;
+      background: var(--blue);
+    }
+
+    .map-pin.active {
+      box-shadow: 0 0 0 5px rgba(15, 118, 110, .16), 0 8px 18px rgba(31, 41, 55, .25);
+    }
+
+    .map-hint {
+      position: absolute;
+      z-index: 3;
+      left: 12px;
+      top: 12px;
+      max-width: calc(100% - 24px);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(255, 255, 255, .88);
+      color: #334155;
+      font-size: 12px;
+      font-weight: 750;
+      box-shadow: 0 4px 14px rgba(31, 41, 55, .12);
+    }
+
+    .map-caption {
+      position: absolute;
+      z-index: 3;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: #26313f;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .map-caption span {
+      min-width: 0;
+      border-radius: 999px;
+      padding: 6px 8px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, .88);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      box-shadow: 0 4px 14px rgba(31, 41, 55, .12);
+    }
+
+    .map-caption span:nth-child(2) {
+      flex: 0 0 auto;
+      color: #0f766e;
+      font-weight: 900;
+    }
+
+    .route-picker {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      background: #eef4f8;
+      transform: translateY(105%);
+      transition: transform .24s ease;
+    }
+
+    .route-picker.open {
+      transform: translateY(0);
+    }
+
+    .route-picker-top {
+      position: relative;
+      z-index: 2;
+      padding: 12px 14px 10px;
+      background: rgba(248, 250, 252, .96);
+      box-shadow: 0 8px 22px rgba(31, 41, 55, .12);
+    }
+
+    .route-picker-title {
+      display: grid;
+      grid-template-columns: 36px 1fr 36px;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .route-picker-title strong {
+      text-align: center;
+      font-size: 17px;
+    }
+
+    .route-picker-fields {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 8px;
+      align-items: stretch;
+      margin-bottom: 10px;
+    }
+
+    .route-field-button {
+      min-width: 0;
+      border: 1px solid rgba(203, 213, 225, .92);
+      border-radius: 8px;
+      padding: 8px 9px;
+      background: #ffffff;
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 6px 14px rgba(31, 41, 55, .06);
+    }
+
+    .route-field-button.active {
+      border-color: rgba(15, 118, 110, .72);
+      background: linear-gradient(180deg, #ecfdf5, #ffffff);
+      box-shadow: 0 0 0 3px rgba(15, 118, 110, .12);
+    }
+
+    .route-field-button span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .route-field-button strong {
+      display: block;
+      margin-top: 3px;
+      overflow: hidden;
+      color: #142033;
+      font-size: 14px;
+      line-height: 1.18;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .route-swap-mini {
+      width: 32px;
+      border: 1px solid rgba(203, 213, 225, .92);
+      border-radius: 8px;
+      background: #f8fafc;
+      color: var(--accent-strong);
+      font-size: 17px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .map-search {
+      min-height: 40px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #ffffff;
+      color: var(--ink);
+    }
+
+    .picker-map {
+      position: relative;
+      overflow: hidden;
+      background: #eef2f6;
+      cursor: grab;
+    }
+
+    .amap-container {
+      position: absolute;
+      inset: 0;
+      background: #eef2f6;
+    }
+
+    .amap-static-map {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+    }
+
+    .amap-static-map.show {
+      opacity: 1;
+    }
+
+    .picker-map:active {
+      cursor: grabbing;
+    }
+
+    .picker-center {
+      position: absolute;
+      z-index: 2;
+      left: 50%;
+      top: 48%;
+      width: 34px;
+      height: 34px;
+      border-radius: 50% 50% 50% 0;
+      background: var(--accent);
+      transform: translate(-50%, -100%) rotate(-45deg);
+      box-shadow: 0 10px 20px rgba(31, 41, 55, .25);
+    }
+
+    .picker-center::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: 50%;
+      background: white;
+    }
+
+    .picker-crosshair {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(17, 94, 89, .42);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .picker-chip {
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      top: calc(48% + 10px);
+      transform: translateX(-50%);
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: rgba(17, 24, 39, .88);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .map-locate {
+      position: absolute;
+      z-index: 3;
+      right: 14px;
+      bottom: 18px;
+      width: 42px;
+      height: 42px;
+      border: 1px solid rgba(148, 163, 184, .48);
+      border-radius: 21px;
+      background: #fff;
+      color: var(--accent-strong);
+      font-weight: 900;
+      box-shadow: 0 8px 18px rgba(31, 41, 55, .14);
+      cursor: pointer;
+    }
+
+    .picker-sheet {
+      position: relative;
+      z-index: 2;
+      padding: 10px 14px 16px;
+      border-top-left-radius: 22px;
+      border-top-right-radius: 22px;
+      background: #fff;
+      box-shadow: 0 -12px 30px rgba(31, 41, 55, .16);
+    }
+
+    .picker-current {
+      display: grid;
+      gap: 3px;
+      margin-bottom: 10px;
+    }
+
+    .picker-current strong {
+      font-size: 17px;
+    }
+
+    .picker-current span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .nearby-list {
+      display: grid;
+      gap: 6px;
+      max-height: 160px;
+      overflow: auto;
+      margin-bottom: 10px;
+    }
+
+    .nearby-item {
+      min-height: 44px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 7px 9px;
+      background: #f8fafc;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .nearby-item.active {
+      border-color: var(--accent);
+      background: #ecfdf5;
+    }
+
+    .nearby-item strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .nearby-item span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .picker-actions {
+      display: grid;
+      gap: 8px;
+    }
+
+    .picker-actions .action {
+      display: grid;
+      place-items: center;
+      text-align: center;
+      line-height: 1.15;
+    }
+
+    .toast {
+      position: absolute;
+      top: 54px;
+      left: 50%;
+      z-index: 8;
+      transform: translateX(-50%) translateY(-18px);
+      opacity: 0;
+      pointer-events: none;
+      border-radius: 999px;
+      padding: 9px 14px;
+      background: rgba(17, 24, 39, .92);
+      color: white;
+      font-size: 14px;
+      font-weight: 750;
+      white-space: nowrap;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .paywall {
+      position: absolute;
+      inset: auto 0 0 0;
+      z-index: 7;
+      min-height: 610px;
+      padding: 16px 18px 24px;
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      background: #fbfcff;
+      box-shadow: 0 -18px 45px rgba(31, 41, 55, .22);
+      transform: translateY(105%);
+      transition: transform .24s ease;
+    }
+
+    .paywall.open { transform: translateY(0); }
+
+    .invite-panel {
+      position: absolute;
+      inset: auto 0 0 0;
+      z-index: 8;
+      min-height: 620px;
+      padding: 16px 18px 24px;
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      background: #fbfcff;
+      box-shadow: 0 -18px 45px rgba(31, 41, 55, .24);
+      transform: translateY(105%);
+      transition: transform .24s ease;
+    }
+
+    .invite-panel.open { transform: translateY(0); }
+
+    .invite-hero {
+      position: relative;
+      overflow: hidden;
+      padding: 16px;
+      border: 1px solid rgba(120, 139, 163, .26);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 90% 8%, rgba(244, 201, 93, .7), transparent 28%),
+        linear-gradient(145deg, rgba(255, 247, 231, .98), rgba(226, 248, 246, .98) 58%, rgba(239, 246, 255, .98));
+    }
+
+    .invite-hero h3 {
+      margin: 6px 0 8px;
+      color: #142033;
+      font-size: 25px;
+      line-height: 1.08;
+    }
+
+    .invite-hero p {
+      color: #475569;
+      font-size: 13px;
+      line-height: 1.46;
+    }
+
+    .invite-progress {
+      margin-top: 12px;
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255,255,255,.7);
+    }
+
+    .invite-progress span {
+      display: block;
+      width: 42%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #0f766e, #3b82f6);
+    }
+
+    .share-card,
+    .coupon-card {
+      margin-top: 12px;
+      padding: 13px;
+      border: 1px solid #d5dfed;
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .share-link {
+      margin-top: 8px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #f8fafc;
+      color: #475569;
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .coupon-wallet {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .coupon-card {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 12px;
+      align-items: center;
+      margin-top: 0;
+    }
+
+    .coupon-card::after {
+      content: "";
+      position: absolute;
+      right: -34px;
+      top: -34px;
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      background: rgba(15, 118, 110, .09);
+    }
+
+    .coupon-amount {
+      display: grid;
+      place-items: center;
+      min-height: 64px;
+      border-radius: 8px;
+      background: #ecfeff;
+      color: #0f766e;
+      font-size: 24px;
+      font-weight: 950;
+    }
+
+    .coupon-copy strong {
+      display: block;
+      color: #142033;
+      font-size: 15px;
+    }
+
+    .coupon-copy span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.36;
+    }
+
+    .crowd-grid {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .crowd-card {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      align-items: center;
+      gap: 11px;
+      padding: 12px;
+      border: 1px solid #d5dfed;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #ffffff, #f8fbff);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .crowd-card:hover { border-color: rgba(15, 118, 110, .5); }
+
+    .crowd-icon {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: 950;
+    }
+
+    .crowd-icon.sleep { background: #6452d9; }
+    .crowd-icon.food { background: #e96b2d; }
+    .crowd-icon.early { background: #17877b; }
+
+    .crowd-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #142033;
+      font-weight: 900;
+    }
+
+    .crowd-badge {
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #fff7ed;
+      color: #c2410c;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .crowd-note {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .crowd-price {
+      color: #0f766e;
+      font-size: 13px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .crowd-paywall {
+      position: absolute;
+      inset: auto 0 0 0;
+      z-index: 8;
+      min-height: 520px;
+      padding: 16px 18px 24px;
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      background: #fbfcff;
+      box-shadow: 0 -18px 45px rgba(31, 41, 55, .24);
+      transform: translateY(105%);
+      transition: transform .24s ease;
+    }
+
+    .crowd-paywall.open { transform: translateY(0); }
+
+    .crowd-pay-hero {
+      padding: 16px;
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 88% 10%, rgba(244, 201, 93, .62), transparent 30%),
+        linear-gradient(145deg, rgba(255, 248, 237, .98), rgba(230, 249, 248, .97) 58%, rgba(240, 246, 255, .98));
+      border: 1px solid rgba(120, 139, 163, .26);
+    }
+
+    .crowd-pay-hero h3 {
+      margin: 8px 0;
+      color: #142033;
+      font-size: 26px;
+      line-height: 1.08;
+    }
+
+    .crowd-pay-hero p {
+      margin: 0 0 10px;
+      color: #475569;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .crowd-pay-copy {
+      margin: 12px 0;
+      padding: 12px;
+      border-radius: 8px;
+      background: #fff3c4;
+      color: #6f3c04;
+      font-size: 13px;
+      font-weight: 750;
+      line-height: 1.45;
+    }
+
+    .auth-screen {
+      position: absolute;
+      inset: 42px 0 0 0;
+      z-index: 6;
+      padding: 22px 18px 28px;
+      overflow: auto;
+      background:
+        linear-gradient(145deg, rgba(255, 248, 237, .96), rgba(232, 247, 248, .96) 58%, rgba(239, 246, 255, .97)),
+        #f8fafc;
+    }
+
+    .auth-hero {
+      position: relative;
+      min-height: 178px;
+      margin-bottom: 14px;
+      padding: 18px;
+      border: 1px solid rgba(120, 139, 163, .3);
+      border-radius: 8px;
+      overflow: hidden;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.78), rgba(255,255,255,.42)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='390' height='190' viewBox='0 0 390 190'%3E%3Crect width='390' height='190' fill='%23e8f3f4'/%3E%3Ccircle cx='310' cy='45' r='29' fill='%23f4c95d'/%3E%3Cpath d='M0 128c48-22 95-28 140-17 42 10 72 34 124 31 45-2 80-24 126-57v105H0z' fill='%239fbbc8' opacity='.38'/%3E%3Cpath d='M24 154c45-20 89-24 131-12 39 11 70 28 113 22 35-5 72-21 98-38' stroke='%230f766e' stroke-width='5' stroke-linecap='round' fill='none'/%3E%3C/svg%3E") center/cover;
+      box-shadow: 0 16px 34px rgba(31, 41, 55, .12);
+    }
+
+    .auth-hero h2 {
+      margin: 8px 0 8px;
+      color: #142033;
+      font-size: 28px;
+      line-height: 1.08;
+    }
+
+    .auth-hero p {
+      max-width: 260px;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.42;
+    }
+
+    .auth-form {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid rgba(203, 213, 225, .86);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .86);
+      box-shadow: 0 12px 28px rgba(31, 41, 55, .1);
+    }
+
+    .auth-form h3 {
+      font-size: 20px;
+    }
+
+    .auth-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .auth-field label {
+      color: #475569;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .auth-note {
+      padding: 10px 12px;
+      border: 1px solid #d9e8ef;
+      border-radius: 8px;
+      background: #f5fbfd;
+      color: #475569;
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .text-button {
+      min-height: 40px;
+      border: 0;
+      background: transparent;
+      color: var(--accent-strong);
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    .drag {
+      width: 42px;
+      height: 5px;
+      border-radius: 3px;
+      margin: 0 auto 14px;
+      background: #cbd3df;
+    }
+
+    .pay-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .pay-intro {
+      margin: -2px 0 14px;
+      padding: 11px 12px;
+      border: 1px solid #dbe3ee;
+      border-radius: 8px;
+      background: #f8fbff;
+      color: #475569;
+      font-size: 14px;
+      line-height: 1.42;
+    }
+
+    .pay-hero {
+      position: relative;
+      margin: 0 0 14px;
+      padding: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(120, 139, 163, .25);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 92% 4%, rgba(244, 201, 93, .72), transparent 28%),
+        linear-gradient(145deg, rgba(255, 247, 229, .96), rgba(228, 247, 248, .96) 56%, rgba(238, 246, 255, .98));
+      box-shadow: 0 16px 32px rgba(31, 41, 55, .12);
+    }
+
+    .pay-hero::after {
+      content: "";
+      position: absolute;
+      right: -16px;
+      bottom: -28px;
+      width: 160px;
+      height: 110px;
+      opacity: .36;
+      background:
+        linear-gradient(90deg, rgba(15, 118, 110, .72), rgba(59, 130, 246, .52));
+      clip-path: polygon(0 70%, 24% 48%, 48% 66%, 74% 34%, 100% 52%, 100% 100%, 0 100%);
+    }
+
+    .pay-kicker {
+      color: #7c4a03;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+
+    .pay-hero h3 {
+      position: relative;
+      z-index: 1;
+      margin: 6px 0 8px;
+      max-width: 270px;
+      color: #142033;
+      font-size: 25px;
+      line-height: 1.08;
+    }
+
+    .pay-hero p {
+      position: relative;
+      z-index: 1;
+      max-width: 286px;
+      margin: 0 0 12px;
+      color: #475569;
+      font-size: 13px;
+      line-height: 1.46;
+    }
+
+    .pay-benefits {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .pay-benefits span {
+      padding: 8px 6px;
+      border: 1px solid rgba(255,255,255,.65);
+      border-radius: 8px;
+      background: rgba(255,255,255,.66);
+      color: #0f766e;
+      font-size: 12px;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .plans {
+      display: grid;
+      gap: 10px;
+    }
+
+    .plan {
+      width: 100%;
+      padding: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid #cad5e7;
+      border-radius: 8px;
+      background: white;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .plan:hover { border-color: var(--blue); }
+
+    .plan.recommended {
+      border-color: rgba(15, 118, 110, .42);
+      background: linear-gradient(135deg, #ffffff, #f0fdfa);
+      box-shadow: 0 12px 24px rgba(15, 118, 110, .10);
+    }
+
+    .plan.owned {
+      border-color: rgba(15, 118, 110, .82);
+      background: linear-gradient(135deg, rgba(236, 253, 245, .96), rgba(239, 246, 255, .92));
+      box-shadow: 0 12px 26px rgba(15, 118, 110, .16);
+    }
+
+    .plan.owned .price {
+      color: #0f766e;
+    }
+
+    .plan-tag {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: #ecfeff;
+      color: #0f766e;
+      font-size: 11px;
+      font-weight: 900;
+      vertical-align: 1px;
+    }
+
+    .plan-title {
+      display: block;
+      font-weight: 850;
+    }
+
+    .plan-note {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .price {
+      color: var(--blue);
+      font-size: 17px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .restore {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .preview-panel {
+      display: grid;
+      gap: 18px;
+    }
+
+    .preview-card {
+      padding: 18px;
+      border: 1px solid rgba(203, 213, 225, .86);
+      border-radius: 8px;
+      background: rgba(255,255,255,.9);
+      box-shadow: 0 12px 38px rgba(31, 41, 55, .1);
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tab {
+      min-height: 36px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: white;
+      cursor: pointer;
+      font-weight: 750;
+    }
+
+    .tab.active {
+      border-color: var(--accent-strong);
+      background: var(--accent-strong);
+      color: white;
+    }
+
+    .widget-stage {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(150px, 1fr));
+      gap: 14px;
+    }
+
+    .widget {
+      aspect-ratio: 1 / 1;
+      padding: 18px;
+      border: 1px solid rgba(202, 213, 231, .9);
+      border-radius: 24px;
+      background:
+        linear-gradient(145deg, rgba(255, 249, 237, .96), rgba(238, 249, 250, .96)),
+        rgba(255,255,255,.93);
+      box-shadow: 0 14px 34px rgba(31, 41, 55, .13);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .widget.medium { aspect-ratio: 2 / 1; }
+
+    .widget-title {
+      font-size: 17px;
+      font-weight: 850;
+    }
+
+    .widget-status {
+      flex: 1;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.38;
+    }
+
+    .widget-time {
+      color: var(--accent-strong);
+      font-size: 26px;
+      font-weight: 900;
+    }
+
+    .note-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    .hidden { display: none; }
+
+    /* Refined visual pass: quieter, simpler, more product-like. */
+    body {
+      background:
+        linear-gradient(180deg, #f6f7f9 0%, #e9edf2 100%);
+    }
+
+    .page {
+      max-width: 1120px;
+      gap: 34px;
+    }
+
+    .phone {
+      padding: 10px;
+      background: #0b0d10;
+      box-shadow: 0 28px 80px rgba(15, 23, 42, .20);
+    }
+
+    .screen {
+      background: #f7f8fa;
+    }
+
+    .statusbar {
+      color: #111827;
+      font-weight: 650;
+    }
+
+    .app {
+      padding: 6px 18px 24px;
+    }
+
+    .nav {
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 780;
+    }
+
+    .pill-btn,
+    .text-button {
+      min-height: 34px;
+      border: 0;
+      background: rgba(17, 24, 39, .06);
+      color: #111827;
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .pill-btn:hover,
+    .text-button:hover {
+      background: rgba(17, 24, 39, .10);
+    }
+
+    .morning-hero,
+    .auth-hero,
+    .pay-hero,
+    .invite-hero,
+    .crowd-pay-hero {
+      border: 0;
+      background: #ffffff;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, .05), 0 18px 40px rgba(15, 23, 42, .06);
+    }
+
+    .morning-hero {
+      min-height: 264px;
+      padding: 18px;
+    }
+
+    .morning-hero::before,
+    .morning-hero::after,
+    .pay-hero::after {
+      display: none;
+    }
+
+    .hero-copy h2 {
+      max-width: 235px;
+      font-size: 35px;
+      letter-spacing: 0;
+    }
+
+    .hero-copy p {
+      max-width: 244px;
+      color: #5f6b7a;
+    }
+
+    .eyebrow,
+    .pay-kicker {
+      color: #6b7280;
+      font-size: 11px;
+      font-weight: 760;
+    }
+
+    .rain-scene {
+      opacity: .56;
+      transform: scale(.86);
+      transform-origin: top right;
+    }
+
+    .hero-metrics {
+      gap: 8px;
+    }
+
+    .hero-metric,
+    .mood-status,
+    .script-step,
+    .section,
+    .share-card,
+    .coupon-card,
+    .route-summary,
+    .preview-card,
+    .plan,
+    .crowd-card {
+      border: 0;
+      background: #ffffff;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, .05);
+    }
+
+    .hero-metric,
+    .script-step,
+    .section,
+    .share-card,
+    .coupon-card,
+    .preview-card,
+    .plan,
+    .crowd-card {
+      border-radius: 8px;
+    }
+
+    .section {
+      margin-bottom: 10px;
+    }
+
+    .row {
+      min-height: 47px;
+      border-bottom-color: #edf0f4;
+    }
+
+    .label {
+      color: #111827;
+      font-weight: 720;
+    }
+
+    .copy,
+    .foot,
+    .plan-note,
+    .coupon-copy span,
+    .crowd-note {
+      color: #667085;
+    }
+
+    .input,
+    .select,
+    .map-search {
+      border: 0;
+      background: #f3f5f7;
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .04);
+    }
+
+    .input:focus,
+    .select:focus,
+    .map-search:focus {
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, .22);
+    }
+
+    .action {
+      border: 0;
+      background: #111827;
+      color: white;
+      box-shadow: none;
+    }
+
+    .action:hover {
+      background: #000;
+      transform: none;
+    }
+
+    .toggle {
+      background: #d9dee7;
+      box-shadow: none;
+    }
+
+    .toggle.on {
+      background: #111827;
+    }
+
+    .care-note,
+    .insight-card,
+    .auth-note,
+    .pay-intro,
+    .crowd-pay-copy {
+      border: 0;
+      background: #f3f5f7;
+    }
+
+    .paywall,
+    .invite-panel,
+    .crowd-paywall {
+      background: #f7f8fa;
+      box-shadow: 0 -18px 55px rgba(15, 23, 42, .18);
+    }
+
+    .plan:hover,
+    .crowd-card:hover {
+      border-color: transparent;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, .05), 0 14px 28px rgba(15, 23, 42, .08);
+    }
+
+    .plan.recommended {
+      background: #ffffff;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, .05);
+    }
+
+    .plan-tag,
+    .crowd-badge {
+      background: #f3f5f7;
+      color: #111827;
+    }
+
+    .coupon-amount,
+    .crowd-icon,
+    .pulse-ring {
+      background: #111827;
+      color: #fff;
+    }
+
+    .preview-panel {
+      gap: 14px;
+    }
+
+    /* Crowdfunding cards need desire: compact, premium, and future-facing. */
+    .crowd-grid {
+      gap: 12px;
+    }
+
+    .crowd-card {
+      position: relative;
+      grid-template-columns: 64px minmax(0, 1fr) auto;
+      gap: 12px;
+      min-height: 92px;
+      padding: 14px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 4% 0%, rgba(255,255,255,.18), transparent 26%),
+        linear-gradient(135deg, #121826 0%, #0b1020 58%, #0e1726 100%);
+      color: #fff;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, .20);
+    }
+
+    .crowd-card::after {
+      content: "";
+      position: absolute;
+      right: -48px;
+      top: -58px;
+      width: 138px;
+      height: 138px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(45, 212, 191, .28), transparent 64%);
+      pointer-events: none;
+    }
+
+    .crowd-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 22px 50px rgba(15, 23, 42, .26);
+    }
+
+    .crowd-icon {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.20), rgba(255,255,255,.05)),
+        rgba(255,255,255,.06);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.14), 0 14px 30px rgba(0,0,0,.28);
+    }
+
+    .crowd-icon::before {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      border-radius: 14px;
+      background: radial-gradient(circle at 50% 45%, var(--icon-glow), transparent 64%);
+      opacity: .9;
+    }
+
+    .crowd-icon.sleep { --icon-glow: rgba(139, 92, 246, .72); }
+    .crowd-icon.food { --icon-glow: rgba(251, 113, 133, .72); }
+    .crowd-icon.early { --icon-glow: rgba(45, 212, 191, .72); }
+
+    .crowd-icon svg {
+      position: relative;
+      z-index: 1;
+      width: 39px;
+      height: 39px;
+      fill: none;
+      stroke: #fff;
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .crowd-icon svg path:first-child,
+    .crowd-icon svg circle:first-child {
+      fill: rgba(255,255,255,.95);
+      stroke: rgba(255,255,255,.95);
+    }
+
+    .crowd-icon .orbit,
+    .crowd-icon .spark,
+    .crowd-icon .hand {
+      fill: none;
+      stroke: rgba(255,255,255,.82);
+      stroke-width: 3;
+    }
+
+    .crowd-icon .dot {
+      fill: #7dd3fc;
+      stroke: none;
+    }
+
+    .crowd-copy {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+    }
+
+    .crowd-title {
+      color: #ffffff;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .crowd-badge {
+      background: rgba(255,255,255,.12);
+      color: rgba(255,255,255,.86);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+    }
+
+    .crowd-note {
+      max-width: 250px;
+      margin-top: 6px;
+      color: rgba(226, 232, 240, .76);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .crowd-price {
+      position: relative;
+      z-index: 1;
+      min-width: 58px;
+      min-height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: #ffffff;
+      color: #111827;
+      font-size: 12px;
+      font-weight: 920;
+      box-shadow: 0 12px 26px rgba(0,0,0,.22);
+    }
+
+    @media (max-width: 860px) {
+      .page {
+        grid-template-columns: 1fr;
+        padding: 18px;
+      }
+      .phone { position: static; }
+      .widget-stage { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="phone" aria-label="iPhone 预览">
+      <div class="screen">
+        <div class="statusbar">
+          <span>09:41</span>
+          <span class="signal" aria-hidden="true"><span></span><span></span><span></span></span>
+        </div>
+
+        <div class="toast" id="toast">购买后才能开启安心模式</div>
+
+        <section class="auth-screen hidden" id="authScreen" aria-label="登录页面预览">
+          <div class="auth-hero">
+            <span class="eyebrow">智能闹钟账号</span>
+            <h2>把早晨交给一个可靠的地方</h2>
+            <p>登录后同步订阅状态、通勤路线和提醒配置。你的令牌会保存在 iOS Keychain。</p>
+          </div>
+
+          <div class="auth-form">
+            <h3 id="authTitle">登录</h3>
+            <div class="auth-field">
+              <label for="authEmail">邮箱</label>
+              <input class="input" id="authEmail" type="email" placeholder="you@example.com" autocomplete="username">
+            </div>
+            <div class="auth-field">
+              <label for="authPassword">密码</label>
+              <input class="input" id="authPassword" type="password" placeholder="至少 12 位" autocomplete="current-password">
+            </div>
+            <div class="auth-field hidden" id="authNameRow">
+              <label for="authName">昵称</label>
+              <input class="input" id="authName" type="text" placeholder="可以稍后再填">
+            </div>
+            <button class="action" id="authSubmit" type="button">登录</button>
+            <button class="text-button" id="authModeToggle" type="button">没有账号，注册</button>
+            <div class="auth-note" id="authMessage">正式 App 会调用 AuthAPIBaseURL 的 HTTPS 登录接口；Web 预览不会提交你的账号密码。</div>
+          </div>
+        </section>
+
+        <div class="app">
+          <div class="nav">
+            <h1>智能闹钟</h1>
+            <div class="nav-actions">
+              <button class="pill-btn" id="openInvite" type="button">邀请</button>
+              <button class="pill-btn" id="openPaywall" type="button">订阅</button>
+            </div>
+          </div>
+
+          <div class="morning-hero" aria-label="明日晨间状态">
+            <div class="hero-copy">
+              <span class="eyebrow">明天早晨 · 小雨通勤</span>
+              <h2>让雨天慢下来</h2>
+              <p id="comfortLine">我会把天气、路况和你的起床节奏放在一起，提前一点，但不吵醒太早。</p>
+            </div>
+            <div class="rain-scene" aria-hidden="true">
+              <div class="rain-cloud"></div>
+              <div class="rain-drop d1"></div>
+              <div class="rain-drop d2"></div>
+              <div class="rain-drop d3"></div>
+              <div class="tiny-route"></div>
+            </div>
+            <div class="hero-metrics">
+              <div class="hero-metric"><span>建议提前</span><strong id="heroAdvance">57 分</strong></div>
+              <div class="hero-metric"><span>通勤缓冲</span><strong id="heroRoute">17 分</strong></div>
+              <div class="hero-metric"><span>明日天气</span><strong id="heroWeather">小雨</strong></div>
+            </div>
+            <div class="mood-status">
+              <div>
+                <span>安心模式</span>
+                <strong id="moodStatusText">雨和路都算进去了，明早不用临时赶时间。</strong>
+              </div>
+              <div class="pulse-ring">稳</div>
+            </div>
+            <div class="morning-script" aria-label="明早时间线">
+              <div class="script-step">
+                <strong id="scriptWake">06:23</strong>
+                <span>轻叫醒</span>
+                <small>先把早晨放慢</small>
+              </div>
+              <div class="script-step">
+                <strong id="scriptLeave">07:08</strong>
+                <span>出门窗口</span>
+                <small>避开雨势最急</small>
+              </div>
+              <div class="script-step">
+                <strong id="scriptArrive">07:50</strong>
+                <span>预计到达</span>
+                <small>给路况留余地</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="row">
+              <span class="label">智能天气调整</span>
+              <button class="toggle" id="smartToggle" type="button" aria-pressed="false" aria-label="智能天气调整">
+                <span></span>
+              </button>
+            </div>
+            <div class="row">
+              <span class="label">地图通勤智能调整</span>
+              <button class="toggle" id="commuteToggle" type="button" aria-pressed="false" aria-label="地图通勤智能调整">
+                <span></span>
+              </button>
+            </div>
+            <div class="foot" id="smartFoot">未购买时无法开启。订阅后才会启用真实天气检测、地图通勤预留和系统闹钟自动调整。</div>
+          </div>
+
+          <div class="section">
+            <div class="row">
+              <span class="label">基础起床时间</span>
+              <span class="value" id="baseTimeLabel">07:20</span>
+            </div>
+            <div class="row">
+              <label class="label" for="timeInput">设置起床时间</label>
+              <input class="input time-input" id="timeInput" type="time" value="07:20">
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="row stack">
+              <span class="label">明日天气</span>
+              <span class="copy" id="weatherText">小雨，降水概率 68%</span>
+              <div class="weather-strip" aria-label="明日 6 点到 9 点天气预览">
+                <div class="weather-hour" style="--rain-level:42%"><strong>06:00</strong><span class="weather-symbol">☁</span><span>42%</span></div>
+                <div class="weather-hour" style="--rain-level:68%"><strong>07:00</strong><span class="weather-symbol">🌧</span><span>68%</span></div>
+                <div class="weather-hour" style="--rain-level:71%"><strong>08:00</strong><span class="weather-symbol">🌧</span><span>71%</span></div>
+                <div class="weather-hour" style="--rain-level:55%"><strong>09:00</strong><span class="weather-symbol">☂</span><span>55%</span></div>
+              </div>
+              <div class="care-note">
+                <strong>伞</strong>
+                <span>7 点到 8 点雨更密，建议把洗漱和出门节奏留出一点余地。</span>
+              </div>
+            </div>
+            <div class="row stack">
+              <span class="label">建议闹钟时间</span>
+              <span class="primary-value" id="suggestedTime">06:23</span>
+              <span class="copy" id="statusText">明天小雨，将提前 57 分钟响铃</span>
+              <div class="insight-card">
+                <span>为什么是这个时间</span>
+                <p id="insightText">雨天提前 40 分钟，驾车通勤再预留 17 分钟，给你一个不慌的早晨。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="row">
+              <span class="label">下雨提前</span>
+              <div class="stepper">
+                <button type="button" data-step="rain" data-delta="-5">−</button>
+                <output id="rainAdvance">20 分</output>
+                <button type="button" data-step="rain" data-delta="5">+</button>
+              </div>
+            </div>
+            <div class="row">
+              <span class="label">强降水提前</span>
+              <div class="stepper">
+                <button type="button" data-step="heavy" data-delta="-5">−</button>
+                <output id="heavyAdvance">40 分</output>
+                <button type="button" data-step="heavy" data-delta="5">+</button>
+              </div>
+            </div>
+            <div class="foot">实际是否提前仍由 WeatherKit 的真实明日降水概率决定。</div>
+          </div>
+
+          <div class="section">
+            <div class="row stack">
+              <span class="label">地图路线设置</span>
+              <div class="map-preview" id="routeMap" aria-label="地图路线预览，可点选出发地或目的地">
+                <div id="mainAmapContainer" class="main-amap-container" aria-hidden="true"></div>
+                <div class="map-hint" id="mapHint">高德路线规划加载中...</div>
+                <div class="map-caption">
+                  <span id="mapStart">望京SOHO</span>
+                  <span id="mapMode">驾车 42 分钟</span>
+                  <span id="mapEnd">中关村</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="row stack">
+              <label class="label" for="modeSelect">通勤方式</label>
+              <select class="select" id="modeSelect">
+                <option value="driving">驾车</option>
+                <option value="transit">公共交通</option>
+                <option value="bicycling">骑行</option>
+                <option value="walking">步行</option>
+              </select>
+            </div>
+            <div id="routeEditor">
+              <div class="row stack">
+                <div class="search-field">
+                  <div class="search-head">
+                    <label class="label" for="startInput">出发地</label>
+                  </div>
+                  <input class="input" id="startInput" type="search" value="望京SOHO" autocomplete="off" readonly placeholder="点击搜索或地图选择出发地">
+                </div>
+              </div>
+              <div class="row stack">
+                <div class="search-field">
+                  <div class="search-head">
+                    <label class="label" for="endInput">目的地</label>
+                  </div>
+                  <input class="input" id="endInput" type="search" value="中关村" autocomplete="off" readonly placeholder="点击搜索或地图选择目的地">
+                </div>
+              </div>
+            </div>
+            <div class="row stack hidden" id="routeSaved">
+              <div class="route-summary">
+                <strong id="savedRouteTitle">望京SOHO → 中关村</strong>
+                <span id="savedRouteMeta">驾车，基础约 42 分钟，距离约 18 公里</span>
+              </div>
+            </div>
+            <div class="row stack">
+              <button class="action" id="routeAction" type="button">保存路线</button>
+              <span class="copy" id="routeText">驾车：望京SOHO → 中关村，基础约 42 分钟</span>
+              <span class="copy" id="routeHelp">雨雪影响：驾车 +5 分钟；公交/骑行/步行会按方式和距离增加更多缓冲。</span>
+            </div>
+            <div class="foot">点击出发地或目的地输入框会打开高德地图；主界面路线、时间、距离和驾车拥堵状态均来自高德路线规划 API。</div>
+          </div>
+
+          <div class="section">
+            <div class="row stack">
+              <span class="label">新功能众筹中</span>
+              <span class="copy">AI 催眠 98 元支持，其他服务 20 元支持，开发出来正式定价时可抵扣。</span>
+            </div>
+            <div class="crowd-grid">
+              <button class="crowd-card" type="button" data-crowd="sleep-ai">
+                <span class="crowd-icon sleep" aria-hidden="true">
+                  <svg viewBox="0 0 64 64" role="img">
+                    <path d="M39 11c-9 3-15 11-15 20 0 12 10 22 22 22 3 0 6-1 8-2-4 6-11 10-19 10-14 0-25-11-25-25 0-12 8-22 19-25 3-1 7-1 10 0z"/>
+                    <path d="M18 19c9-8 24-9 34-1" class="orbit"/>
+                    <circle cx="49" cy="17" r="3" class="dot"/>
+                  </svg>
+                </span>
+                <span class="crowd-copy">
+                  <span class="crowd-title">AI 催眠引导睡眠 <span class="crowd-badge">众筹中</span></span>
+                  <span class="crowd-note">专属睡前声景与呼吸节奏，把脑内噪音降下来。</span>
+                </span>
+                <span class="crowd-price">支持 98</span>
+              </button>
+              <button class="crowd-card" type="button" data-crowd="takeout">
+                <span class="crowd-icon food" aria-hidden="true">
+                  <svg viewBox="0 0 64 64" role="img">
+                    <path d="M17 25h30l-3 26H20l-3-26z"/>
+                    <path d="M24 25c1-8 5-13 10-13s9 5 10 13" class="orbit"/>
+                    <path d="M12 18h10M42 14h10M48 20h5" class="spark"/>
+                    <circle cx="28" cy="35" r="2" class="dot"/>
+                    <circle cx="39" cy="35" r="2" class="dot"/>
+                  </svg>
+                </span>
+                <span class="crowd-copy">
+                  <span class="crowd-title">天气外卖提醒 <span class="crowd-badge">众筹中</span></span>
+                  <span class="crowd-note">暴雨降温前先安排晚饭，少一次被天气打乱。</span>
+                </span>
+                <span class="crowd-price">支持 20</span>
+              </button>
+              <button class="crowd-card" type="button" data-crowd="early-sleep">
+                <span class="crowd-icon early" aria-hidden="true">
+                  <svg viewBox="0 0 64 64" role="img">
+                    <circle cx="32" cy="35" r="17"/>
+                    <path d="M32 25v12l8 5" class="hand"/>
+                    <path d="M15 16l8-6M49 16l-8-6M18 55l5-6M46 49l5 6" class="spark"/>
+                    <path d="M24 20c5-4 11-4 16 0" class="orbit"/>
+                  </svg>
+                </span>
+                <span class="crowd-copy">
+                  <span class="crowd-title">提前睡觉闹钟 <span class="crowd-badge">众筹中</span></span>
+                  <span class="crowd-note">明早压力越大，今晚越早温柔提醒你收尾。</span>
+                </span>
+                <span class="crowd-price">支持 20</span>
+              </button>
+            </div>
+            <div class="foot">众筹权益仅用于对应服务上线后的价格抵扣，不可转让或跨服务使用。</div>
+          </div>
+        </div>
+
+        <section class="route-picker" id="routePicker" aria-label="地图选点页面">
+          <div class="route-picker-top">
+            <div class="route-picker-title">
+              <button class="icon-btn" id="closeRoutePicker" type="button" aria-label="返回">‹</button>
+              <strong id="routePickerTitle">设置通勤路线</strong>
+              <button class="icon-btn" id="swapPickKind" type="button" aria-label="切换起终点">⇄</button>
+            </div>
+            <div class="route-picker-fields" aria-label="路线起终点">
+              <button class="route-field-button active" id="pickerStartField" type="button">
+                <span>出发地</span>
+                <strong id="pickerStartName">望京SOHO</strong>
+              </button>
+              <button class="route-swap-mini" id="swapRoutePlaces" type="button" aria-label="交换出发地和目的地">⇄</button>
+              <button class="route-field-button" id="pickerEndField" type="button">
+                <span>目的地</span>
+                <strong id="pickerEndName">中关村</strong>
+              </button>
+            </div>
+            <input class="map-search" id="pickerSearch" type="search" autocomplete="off" placeholder="搜索地点、小区、公司或地铁站">
+          </div>
+
+          <div class="picker-map" id="pickerMap" aria-label="高德地图选点">
+            <div id="amapContainer" class="amap-container"></div>
+            <img id="amapStaticMap" class="amap-static-map" alt="高德静态地图">
+            <div class="picker-center"></div>
+            <div class="picker-chip" id="mapLoadHint">正在加载高德地图...</div>
+            <button class="map-locate" id="locateMe" type="button" aria-label="定位当前位置">⌖</button>
+          </div>
+
+          <div class="picker-sheet">
+            <div class="picker-current">
+              <strong id="pickerCurrentName">望京SOHO</strong>
+              <span id="pickerCurrentAddress">北京市朝阳区阜通东大街</span>
+            </div>
+            <div class="nearby-list" id="nearbyList" aria-label="附近地点推荐"></div>
+            <button class="restore" id="openAmapExternal" type="button">在高德地图中打开</button>
+            <div class="picker-actions">
+              <button class="action" id="pickerPrimaryAction" type="button">设为出发地</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="paywall" id="paywall" aria-label="订阅页面">
+          <div class="drag"></div>
+          <div class="pay-head">
+            <h2>解锁安心早晨</h2>
+            <button class="icon-btn" id="closePaywall" type="button" aria-label="关闭订阅页">×</button>
+          </div>
+          <div class="pay-hero">
+            <div class="pay-kicker">未购买时无法开启智能天气调整</div>
+            <h3>把明早的不确定，交给今晚处理</h3>
+            <p>下雨、下雪、堵车、换乘变慢，都不该在你睁眼那一刻才突然出现。新用户已获得 51% 限时优惠，原价 598 元的永久能力现在 298 元解锁。</p>
+            <div class="pay-benefits">
+              <span>真实天气</span>
+              <span>通勤预留</span>
+              <span>系统闹钟</span>
+            </div>
+          </div>
+          <p class="pay-intro">你买的不是一个开关，而是明天早晨少一点慌张：雨雪天自动提前、路线变慢自动预留、醒来时已经有答案。50 元代金券仅可用于智能永久买断或高德增强，不可用于月/年订阅。</p>
+
+          <div class="plans">
+            <button class="plan" type="button" data-product="weather_monthly">
+              <span><span class="plan-title">天气月订阅</span><span class="plan-note">先试一个月，把明早交给它；代金券不适用</span></span>
+              <span class="price">19 元/月</span>
+            </button>
+            <button class="plan recommended" type="button" data-product="weather_yearly">
+              <span><span class="plan-title">天气年订阅<span class="plan-tag">推荐</span></span><span class="plan-note">少一次迟到、少一次狼狈，就已经很值；代金券不适用</span></span>
+              <span class="price">98 元/年</span>
+            </button>
+            <button class="plan" type="button" data-product="forever">
+              <span><span class="plan-title">智能永久买断<span class="plan-tag">51% 新人券</span></span><span class="plan-note">原价 598 元；新用户本次打开获得 298 元永久购买权，100 元永久立减券后 198 元，50 代金券后 248 元</span></span>
+              <span class="price">598 元 → 298 元</span>
+            </button>
+            <button class="plan" type="button" data-product="gaode">
+              <span><span class="plan-title">高德路况增强</span><span class="plan-note">雨天把驾车、公交、骑行、步行变慢都算进去；50 代金券可抵首月</span></span>
+              <span class="price">5 元/月</span>
+            </button>
+          </div>
+
+          <button class="restore" id="restore" type="button">恢复购买</button>
+        </section>
+
+        <section class="invite-panel" id="invitePanel" aria-label="分享邀请与券包页面">
+          <div class="drag"></div>
+          <div class="pay-head">
+            <h2>分享与券包</h2>
+            <button class="icon-btn" id="closeInvite" type="button" aria-label="关闭分享页">×</button>
+          </div>
+
+          <div class="invite-hero">
+            <div class="pay-kicker">单层邀请 · 合规奖励</div>
+            <h3>把一个更从容的早晨，送给朋友</h3>
+            <p>好友通过你的链接完成购买：TA 得 50 元代金券，你得 100 元永久立减券。50 元券仅可用于智能永久买断或高德增强。</p>
+            <div class="invite-progress"><span></span></div>
+          </div>
+
+          <div class="share-card">
+            <strong>我的邀请链接</strong>
+            <div class="share-link">weatherwake://invite?ref=demo-user-uuid</div>
+            <button class="action" id="shareInvite" type="button">分享邀请链接</button>
+          </div>
+
+          <div class="coupon-wallet">
+            <div class="coupon-card">
+              <div class="coupon-amount">50</div>
+              <div class="coupon-copy">
+                <strong>好友 50 元代金券</strong>
+                <span>仅可用于智能永久买断或高德增强；不可用于天气月订阅/年订阅，不可叠加。</span>
+              </div>
+            </div>
+            <div class="coupon-card">
+              <div class="coupon-amount">100</div>
+              <div class="coupon-copy">
+                <strong>推荐人 100 元永久立减券</strong>
+                <span>仅可用于新人 298 元智能永久购买权，抵后实付 198 元。</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="crowd-paywall" id="crowdPaywall" aria-label="众筹支付页面">
+          <div class="drag"></div>
+          <div class="pay-head">
+            <h2>支持一个更懂你的功能</h2>
+            <button class="icon-btn" id="closeCrowdPaywall" type="button" aria-label="关闭众筹支付页">×</button>
+          </div>
+          <div class="crowd-pay-hero">
+            <div class="pay-kicker" id="crowdPayKicker">众筹中 · 98 元支持</div>
+            <h3 id="crowdPayTitle">AI 催眠引导睡眠</h3>
+            <p id="crowdPayPromise">把脑子里停不下来的事，慢慢放到明天再说。</p>
+            <p id="crowdPayDetail">未来会根据你的起床时间、明天天气和睡眠目标，生成温柔的睡前引导。</p>
+          </div>
+          <div class="crowd-pay-copy" id="crowdPayCopy">现在支持 98 元，正式上线后可抵扣这个服务的定价。你会成为这项功能的早期支持者，也会帮它更快从愿望清单变成真实能力。</div>
+          <button class="action" id="supportCrowd" type="button">支持 98 元，锁定抵扣权益</button>
+          <button class="restore" id="crowdLater" type="button">我再想想</button>
+        </section>
+      </div>
+    </section>
+
+    <section class="preview-panel">
+      <div class="preview-card">
+        <h2>预览控制</h2>
+        <div class="tabs" role="tablist">
+          <button class="tab" type="button" data-view="auth">登录页</button>
+          <button class="tab active" type="button" data-view="main">主界面</button>
+          <button class="tab" type="button" data-view="paywall">订阅页</button>
+          <button class="tab" type="button" data-view="widget">Widget</button>
+        </div>
+      </div>
+
+      <div class="preview-card" id="mainNotes">
+        <h2>当前 SwiftUI 功能</h2>
+        <ul class="note-list">
+          <li>主界面显示基础起床时间、明日天气、建议闹钟时间。</li>
+          <li>下雨/强降水提前时间可自动参与建议计算，也可由用户调整。</li>
+          <li>通勤方式覆盖驾车、公共交通、骑行和步行，雨雪影响按方式和路线距离估算。</li>
+          <li>智能天气调整和地图通勤智能调整都放在主界面顶部；未付费点击任一开关都会打开 StoreKit 2 订阅页。</li>
+          <li>顶部“邀请”按钮会打开分享界面和券包，展示 50 元券/100 元券的使用范围。</li>
+          <li>AI 催眠显示为“众筹中 98 元”，天气外卖提醒和提前睡觉闹钟为 20 元，正式上线后可抵扣对应服务价格。</li>
+        </ul>
+      </div>
+
+      <div class="preview-card hidden" id="authNotes">
+        <h2>登录系统</h2>
+        <ul class="note-list">
+          <li>登录页对应原生 SwiftUI 的 LoginView。</li>
+          <li>正式 App 会调用 AuthAPIBaseURL 的 HTTPS 后端接口。</li>
+          <li>访问令牌和刷新令牌保存在 iOS Keychain，不写入 UserDefaults。</li>
+          <li>Web 预览只展示界面，不提交账号密码，也不模拟登录成功。</li>
+        </ul>
+      </div>
+
+      <div class="preview-card hidden" id="widgetNotes">
+        <h2>锁屏小组件样式</h2>
+        <div class="widget-stage">
+          <div class="widget">
+            <div class="widget-title">智能闹钟状态</div>
+            <div class="widget-status" id="smallWidgetStatus">明天小雨，将提前 57 分钟响铃</div>
+            <div>
+              <div class="value">基础</div>
+              <div class="widget-time" id="smallWidgetTime">07:20</div>
+            </div>
+          </div>
+
+          <div class="widget medium">
+            <div class="widget-title">智能闹钟状态</div>
+            <div class="widget-status" id="mediumWidgetStatus">明天小雨，将提前 57 分钟响铃</div>
+            <div>
+              <span class="value">建议 </span>
+              <span class="widget-time" id="mediumWidgetTime">06:23</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const state = {
+      subscribed: false,
+      weatherEntitled: false,
+      gaodeEntitled: false,
+      foreverEntitled: false,
+      smartEnabled: false,
+      commuteEnabled: false,
+      baseTime: "07:20",
+      rainAdvance: 20,
+      heavyAdvance: 40,
+      precip: 68,
+      condition: "小雨",
+      mode: "driving",
+      routeMinutes: 42,
+      routeKm: 18,
+      routeCongestion: "高德规划中",
+      routeSource: "高德路线规划",
+      routeEditing: true,
+      picking: "start",
+      pickerOpen: false,
+      authRegister: false,
+      pendingUnlockTarget: null,
+      pendingPickPlace: null,
+      draftStartPlace: null,
+      draftEndPlace: null,
+      draftStartConfirmed: false,
+      draftEndConfirmed: false,
+      selectedCrowdFeature: "sleep-ai",
+      startPlace: { name: "望京SOHO", address: "北京市朝阳区阜通东大街", lng: 116.481, lat: 39.996, x: 68, y: 112 },
+      endPlace: { name: "中关村", address: "北京市海淀区中关村大街", lng: 116.316, lat: 39.983, x: 270, y: 36 }
+    };
+
+    const modeNames = {
+      driving: "驾车",
+      transit: "公共交通",
+      bicycling: "骑行",
+      walking: "步行"
+    };
+
+    const AMAP_JS_API_KEY = "19f1f3bb82da42e31939daa17688f4be";
+    // TODO: 如果你的高德控制台为 JS API 启用了安全密钥，请填写 securityJsCode。
+    const AMAP_SECURITY_JS_CODE = "977fcb2da98d276b5216b01348e1af3f";
+    let amapLoadPromise;
+    let amapMap;
+    let amapPlaceSearch;
+    let amapAutoComplete;
+    let amapGeocoder;
+    let amapTileFallbackTimer;
+    let amapSearchTimer;
+    let amapSearchSeq = 0;
+    let mainAmapMap;
+    let mainRouteService;
+    let mainRouteTimer;
+    let mainRouteSeq = 0;
+
+    const crowdFeatures = {
+      "sleep-ai": {
+        title: "AI 催眠引导睡眠",
+        amount: 98,
+        promise: "把脑子里停不下来的事，慢慢放到明天再说。",
+        detail: "未来会根据你的起床时间、明天天气和睡眠目标，生成温柔的睡前引导：呼吸、放松、白噪音脚本和轻提示，让你更容易进入睡眠。"
+      },
+      takeout: {
+        title: "天气外卖提醒",
+        amount: 20,
+        promise: "雨下大之前，先把晚饭安排好。",
+        detail: "未来会根据明天和当下天气提醒你是否适合点外卖：暴雨、降温、风大、通勤变慢时，提前给出更省心的生活建议。"
+      },
+      "early-sleep": {
+        title: "提前睡觉闹钟",
+        amount: 20,
+        promise: "明天会更难起，就今晚早点被温柔提醒。",
+        detail: "未来会根据明天雨雪、通勤压力和建议起床时间，提前提醒你该准备睡觉，把明早的压力挪到今晚轻轻解决。"
+      }
+    };
+
+    const productCopy = {
+      weather_monthly: {
+        title: "天气月订阅",
+        note: "先试一个月，把明早交给它；代金券不适用",
+        price: "19 元/月",
+        ownedNote: "已解锁天气智能调整。今晚可以睡得更踏实，明早的雨雪它会先替你看。",
+        ownedPrice: "已拥有"
+      },
+      weather_yearly: {
+        title: "天气年订阅",
+        note: "少一次迟到、少一次狼狈，就已经很值；代金券不适用",
+        price: "98 元/年",
+        ownedNote: "已拥有全年安心早晨。每个雨雪天，它都会提前替你准备。",
+        ownedPrice: "已拥有"
+      },
+      forever: {
+        title: "智能永久买断",
+        note: "原价 598 元；新用户本次打开获得 298 元永久购买权，100 元永久立减券后 198 元，50 代金券后 248 元",
+        price: "598 元 → 298 元",
+        ownedNote: "永久安心已到账。智能闹钟和高德增强都为你长期打开。",
+        ownedPrice: "永久拥有"
+      },
+      gaode: {
+        title: "高德路况增强",
+        note: "雨天把驾车、公交、骑行、步行变慢都算进去；50 代金券可抵首月",
+        price: "5 元/月",
+        ownedNote: "高德通勤增强已解锁。堵车、换乘、骑行步行的雨天损耗都会算进去。",
+        ownedPrice: "已拥有"
+      }
+    };
+
+    const paywall = document.querySelector("#paywall");
+    const invitePanel = document.querySelector("#invitePanel");
+    const crowdPaywall = document.querySelector("#crowdPaywall");
+    const openInvite = document.querySelector("#openInvite");
+    const closeInvite = document.querySelector("#closeInvite");
+    const shareInvite = document.querySelector("#shareInvite");
+    const closeCrowdPaywall = document.querySelector("#closeCrowdPaywall");
+    const crowdPayTitle = document.querySelector("#crowdPayTitle");
+    const crowdPayKicker = document.querySelector("#crowdPayKicker");
+    const crowdPayPromise = document.querySelector("#crowdPayPromise");
+    const crowdPayDetail = document.querySelector("#crowdPayDetail");
+    const crowdPayCopy = document.querySelector("#crowdPayCopy");
+    const supportCrowd = document.querySelector("#supportCrowd");
+    const crowdLater = document.querySelector("#crowdLater");
+    const toast = document.querySelector("#toast");
+    const morningHero = document.querySelector(".morning-hero");
+    const authScreen = document.querySelector("#authScreen");
+    const authTitle = document.querySelector("#authTitle");
+    const authPassword = document.querySelector("#authPassword");
+    const authNameRow = document.querySelector("#authNameRow");
+    const authSubmit = document.querySelector("#authSubmit");
+    const authModeToggle = document.querySelector("#authModeToggle");
+    const authMessage = document.querySelector("#authMessage");
+    const smartToggle = document.querySelector("#smartToggle");
+    const commuteToggle = document.querySelector("#commuteToggle");
+    const smartFoot = document.querySelector("#smartFoot");
+    const timeInput = document.querySelector("#timeInput");
+    const baseTimeLabel = document.querySelector("#baseTimeLabel");
+    const comfortLine = document.querySelector("#comfortLine");
+    const heroAdvance = document.querySelector("#heroAdvance");
+    const heroRoute = document.querySelector("#heroRoute");
+    const heroWeather = document.querySelector("#heroWeather");
+    const moodStatusText = document.querySelector("#moodStatusText");
+    const scriptWake = document.querySelector("#scriptWake");
+    const scriptLeave = document.querySelector("#scriptLeave");
+    const scriptArrive = document.querySelector("#scriptArrive");
+    const insightText = document.querySelector("#insightText");
+    const suggestedTime = document.querySelector("#suggestedTime");
+    const statusText = document.querySelector("#statusText");
+    const weatherText = document.querySelector("#weatherText");
+    const rainAdvance = document.querySelector("#rainAdvance");
+    const heavyAdvance = document.querySelector("#heavyAdvance");
+    const modeSelect = document.querySelector("#modeSelect");
+    const routeMap = document.querySelector("#routeMap");
+    const mapHint = document.querySelector("#mapHint");
+    const mainAmapContainer = document.querySelector("#mainAmapContainer");
+    const routeEditor = document.querySelector("#routeEditor");
+    const routeSaved = document.querySelector("#routeSaved");
+    const routeAction = document.querySelector("#routeAction");
+    const routePicker = document.querySelector("#routePicker");
+    const closeRoutePicker = document.querySelector("#closeRoutePicker");
+    const swapPickKind = document.querySelector("#swapPickKind");
+    const routePickerTitle = document.querySelector("#routePickerTitle");
+    const pickerStartField = document.querySelector("#pickerStartField");
+    const pickerEndField = document.querySelector("#pickerEndField");
+    const pickerStartName = document.querySelector("#pickerStartName");
+    const pickerEndName = document.querySelector("#pickerEndName");
+    const swapRoutePlaces = document.querySelector("#swapRoutePlaces");
+    const pickerMap = document.querySelector("#pickerMap");
+    const amapStaticMap = document.querySelector("#amapStaticMap");
+    const mapLoadHint = document.querySelector("#mapLoadHint");
+    const pickerSearch = document.querySelector("#pickerSearch");
+    const nearbyList = document.querySelector("#nearbyList");
+    const pickerCurrentName = document.querySelector("#pickerCurrentName");
+    const pickerCurrentAddress = document.querySelector("#pickerCurrentAddress");
+    const pickerPrimaryAction = document.querySelector("#pickerPrimaryAction");
+    const locateMe = document.querySelector("#locateMe");
+    const openAmapExternal = document.querySelector("#openAmapExternal");
+    const startInput = document.querySelector("#startInput");
+    const endInput = document.querySelector("#endInput");
+    const routeText = document.querySelector("#routeText");
+    const routeHelp = document.querySelector("#routeHelp");
+    const savedRouteTitle = document.querySelector("#savedRouteTitle");
+    const savedRouteMeta = document.querySelector("#savedRouteMeta");
+    const mapStart = document.querySelector("#mapStart");
+    const mapMode = document.querySelector("#mapMode");
+    const mapEnd = document.querySelector("#mapEnd");
+    const widgetSmallStatus = document.querySelector("#smallWidgetStatus");
+    const widgetMediumStatus = document.querySelector("#mediumWidgetStatus");
+    const widgetSmallTime = document.querySelector("#smallWidgetTime");
+    const widgetMediumTime = document.querySelector("#mediumWidgetTime");
+    const tabs = document.querySelectorAll(".tab");
+    const mainNotes = document.querySelector("#mainNotes");
+    const authNotes = document.querySelector("#authNotes");
+    const widgetNotes = document.querySelector("#widgetNotes");
+    let toastTimer;
+
+    amapStaticMap.addEventListener("error", () => {
+      mapLoadHint.textContent = "高德静态地图加载失败，请检查 Key 是否开通 Web 服务/静态地图权限";
+    });
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 1900);
+    }
+
+    function setPaywall(open) {
+      paywall.classList.toggle("open", open);
+      if (!open) state.pendingUnlockTarget = null;
+      if (open) updatePlanCards();
+      if (open) {
+        crowdPaywall.classList.remove("open");
+        invitePanel.classList.remove("open");
+      }
+    }
+
+    function setInvitePanel(open) {
+      invitePanel.classList.toggle("open", open);
+      if (open) {
+        paywall.classList.remove("open");
+        crowdPaywall.classList.remove("open");
+      }
+    }
+
+    function canUseWeatherFeature() {
+      return state.weatherEntitled || state.foreverEntitled;
+    }
+
+    function canUseGaodeFeature() {
+      return state.gaodeEntitled || state.foreverEntitled;
+    }
+
+    function syncEntitlements() {
+      state.subscribed = canUseWeatherFeature() || canUseGaodeFeature();
+      if (!canUseWeatherFeature()) state.smartEnabled = false;
+      if (!canUseGaodeFeature()) state.commuteEnabled = false;
+    }
+
+    function isProductOwned(product) {
+      if (product === "weather_monthly" || product === "weather_yearly") return state.weatherEntitled && !state.foreverEntitled;
+      if (product === "forever") return state.foreverEntitled;
+      if (product === "gaode") return canUseGaodeFeature();
+      return false;
+    }
+
+    function updatePlanCards() {
+      document.querySelectorAll(".plan").forEach((button) => {
+        const product = button.dataset.product;
+        const copy = productCopy[product];
+        if (!copy) return;
+        const note = button.querySelector(".plan-note");
+        const price = button.querySelector(".price");
+        const owned = isProductOwned(product);
+        button.classList.toggle("owned", owned);
+        button.setAttribute("aria-pressed", String(owned));
+        if (note) note.textContent = owned ? copy.ownedNote : copy.note;
+        if (price) price.textContent = owned ? copy.ownedPrice : copy.price;
+      });
+    }
+
+    function requireMapPurchase() {
+      if (canUseGaodeFeature()) return true;
+      state.pendingUnlockTarget = "commute";
+      showToast("购买后才能使用高德地图路线设置");
+      setPaywall(true);
+      return false;
+    }
+
+    function setCrowdPaywall(open, featureKey = state.selectedCrowdFeature) {
+      state.selectedCrowdFeature = featureKey;
+      const feature = crowdFeatures[featureKey];
+      crowdPayTitle.textContent = feature.title;
+      crowdPayKicker.textContent = `众筹中 · ${feature.amount} 元支持`;
+      crowdPayPromise.textContent = feature.promise;
+      crowdPayDetail.textContent = feature.detail;
+      crowdPayCopy.textContent = `现在支持 ${feature.amount} 元，正式上线后可抵扣这个服务的定价。你会成为这项功能的早期支持者，也会帮它更快从愿望清单变成真实能力。`;
+      supportCrowd.textContent = `支持 ${feature.amount} 元，锁定抵扣权益`;
+      crowdPaywall.classList.toggle("open", open);
+      if (open) {
+        paywall.classList.remove("open");
+        invitePanel.classList.remove("open");
+      }
+    }
+
+    function setAuthVisible(open) {
+      authScreen.classList.toggle("hidden", !open);
+    }
+
+    function updateAuthUI() {
+      authTitle.textContent = state.authRegister ? "创建账号" : "登录";
+      authSubmit.textContent = state.authRegister ? "创建账号" : "登录";
+      authModeToggle.textContent = state.authRegister ? "已有账号，去登录" : "没有账号，注册";
+      authNameRow.classList.toggle("hidden", !state.authRegister);
+      authPassword.setAttribute("autocomplete", state.authRegister ? "new-password" : "current-password");
+      authMessage.textContent = state.authRegister
+        ? "正式 App 会通过 HTTPS 注册账号，并把令牌保存到 iOS Keychain。Web 预览不会提交你的账号密码。"
+        : "正式 App 会调用 AuthAPIBaseURL 的 HTTPS 登录接口；Web 预览不会提交你的账号密码。";
+    }
+
+    function parseMinutes(time) {
+      const [hour, minute] = time.split(":").map(Number);
+      return hour * 60 + minute;
+    }
+
+    function formatMinutes(minutes) {
+      const wrapped = (minutes + 24 * 60) % (24 * 60);
+      const hour = String(Math.floor(wrapped / 60)).padStart(2, "0");
+      const minute = String(wrapped % 60).padStart(2, "0");
+      return `${hour}:${minute}`;
+    }
+
+    function shortPlaceName(place) {
+      return place.name.replace(/^北京市|朝阳区|海淀区/g, "").slice(0, 8) || "地点";
+    }
+
+    function normalizeAmapLocation(location) {
+      if (!location) return { lng: undefined, lat: undefined };
+      if (typeof location === "string") {
+        const [lng, lat] = location.split(",").map(Number);
+        return Number.isFinite(lng) && Number.isFinite(lat) ? { lng, lat } : { lng: undefined, lat: undefined };
+      }
+      const lng = typeof location.lng === "function" ? location.lng() : location.lng;
+      const lat = typeof location.lat === "function" ? location.lat() : location.lat;
+      return {
+        lng: Number.isFinite(Number(lng)) ? Number(lng) : undefined,
+        lat: Number.isFinite(Number(lat)) ? Number(lat) : undefined
+      };
+    }
+
+    function routeDistanceKm() {
+      const dx = state.endPlace.x - state.startPlace.x;
+      const dy = state.endPlace.y - state.startPlace.y;
+      return Math.max(1.2, Math.round(Math.hypot(dx, dy) / 11));
+    }
+
+    function recalculateRoute() {
+      state.routeKm = routeDistanceKm();
+      const speedByMode = {
+        driving: 0.78,
+        transit: 0.55,
+        bicycling: 0.25,
+        walking: 0.09
+      };
+      const fixedByMode = {
+        driving: 18,
+        transit: 26,
+        bicycling: 12,
+        walking: 0
+      };
+      state.routeMinutes = Math.round(fixedByMode[state.mode] + state.routeKm / speedByMode[state.mode]);
+      state.routeSource = "本地临时估算";
+      state.routeCongestion = "等待高德规划";
+    }
+
+    function amapLngLat(place) {
+      return [Number(place.lng), Number(place.lat)];
+    }
+
+    function hasValidAmapPoint(place) {
+      return Number.isFinite(Number(place?.lng)) && Number.isFinite(Number(place?.lat));
+    }
+
+    function formatKmFromMeters(meters) {
+      const value = Number(meters);
+      if (!Number.isFinite(value) || value <= 0) return state.routeKm;
+      return Math.max(0.1, Math.round(value / 100) / 10);
+    }
+
+    function formatMinutesFromSeconds(seconds) {
+      const value = Number(seconds);
+      if (!Number.isFinite(value) || value <= 0) return state.routeMinutes;
+      return Math.max(1, Math.round(value / 60));
+    }
+
+    function getPrimaryRouteResult(result) {
+      return result?.routes?.[0] || result?.plans?.[0] || result?.paths?.[0] || result?.route?.paths?.[0] || null;
+    }
+
+    function extractRouteTime(result) {
+      const primary = getPrimaryRouteResult(result);
+      return primary?.time || primary?.duration || primary?.cost?.duration || result?.route?.time;
+    }
+
+    function extractRouteDistance(result) {
+      const primary = getPrimaryRouteResult(result);
+      return primary?.distance || primary?.cost?.distance || result?.route?.distance;
+    }
+
+    function extractDrivingCongestion(result) {
+      if (state.mode !== "driving") return "无拥堵分段信息";
+      const primary = getPrimaryRouteResult(result);
+      const statuses = [];
+      (primary?.steps || []).forEach((step) => {
+        (step.tmcs || []).forEach((tmc) => {
+          if (tmc.status) statuses.push(tmc.status);
+        });
+      });
+      if (!statuses.length) return "高德未返回拥堵分段";
+      if (statuses.some((status) => /严重拥堵/.test(status))) return "严重拥堵";
+      if (statuses.some((status) => /拥堵/.test(status))) return "拥堵";
+      if (statuses.some((status) => /缓行/.test(status))) return "缓行";
+      return "畅通";
+    }
+
+    function ensureMainAmapMap(AMap) {
+      if (mainAmapMap) return mainAmapMap;
+      mainAmapMap = new AMap.Map("mainAmapContainer", {
+        zoom: 12,
+        center: amapLngLat(state.startPlace),
+        resizeEnable: true,
+        viewMode: "2D"
+      });
+      return mainAmapMap;
+    }
+
+    function createRouteService(AMap) {
+      if (mainRouteService?.clear) mainRouteService.clear();
+      if (mainAmapMap?.clearMap) mainAmapMap.clearMap();
+      const baseOptions = { map: mainAmapMap, hideMarkers: false };
+      if (state.mode === "driving") {
+        return new AMap.Driving({
+          ...baseOptions,
+          policy: AMap.DrivingPolicy?.LEAST_TIME,
+          showTraffic: true
+        });
+      }
+      if (state.mode === "transit") {
+        return new AMap.Transfer({
+          ...baseOptions,
+          policy: AMap.TransferPolicy?.LEAST_TIME,
+          city: "全国",
+          cityd: "全国"
+        });
+      }
+      if (state.mode === "bicycling") return new AMap.Riding(baseOptions);
+      return new AMap.Walking(baseOptions);
+    }
+
+    function applyAmapRouteResult(result) {
+      const distance = extractRouteDistance(result);
+      const duration = extractRouteTime(result);
+      state.routeKm = formatKmFromMeters(distance);
+      state.routeMinutes = formatMinutesFromSeconds(duration);
+      state.routeCongestion = extractDrivingCongestion(result);
+      state.routeSource = "高德路线规划";
+      mapHint.textContent = `${modeNames[state.mode]}路线来自高德，${state.routeCongestion}`;
+      updateUI();
+    }
+
+    function scheduleAmapRoutePlan() {
+      clearTimeout(mainRouteTimer);
+      mainRouteTimer = setTimeout(planAmapRoute, 420);
+    }
+
+    async function planAmapRoute() {
+      if (!canUseGaodeFeature()) {
+        mapHint.textContent = "购买后解锁高德地图路线规划";
+        return;
+      }
+      if (!hasValidAmapPoint(state.startPlace) || !hasValidAmapPoint(state.endPlace)) {
+        mapHint.textContent = "请先用高德地图选择完整出发地和目的地";
+        return;
+      }
+      const seq = ++mainRouteSeq;
+      mapHint.textContent = `正在调用高德${modeNames[state.mode]}路线规划...`;
+      try {
+        const AMap = await loadAmap();
+        await new Promise((resolve) => {
+          const timer = setTimeout(resolve, 1600);
+          AMap.plugin(["AMap.Driving", "AMap.Transfer", "AMap.Riding", "AMap.Walking"], () => {
+            clearTimeout(timer);
+            resolve();
+          });
+        });
+        ensureMainAmapMap(AMap);
+        mainRouteService = createRouteService(AMap);
+        const start = amapLngLat(state.startPlace);
+        const end = amapLngLat(state.endPlace);
+        const routeTimeout = setTimeout(() => {
+          if (seq !== mainRouteSeq) return;
+          state.routeSource = "高德路线规划超时";
+          state.routeCongestion = "暂未返回";
+          mapHint.textContent = "高德路线规划超时，当前显示临时估算";
+          updateUI();
+        }, 5200);
+        mainRouteService.search(start, end, (status, result) => {
+          clearTimeout(routeTimeout);
+          if (seq !== mainRouteSeq) return;
+          if (status === "complete") {
+            applyAmapRouteResult(result);
+            return;
+          }
+          state.routeSource = "高德路线规划失败";
+          state.routeCongestion = "暂未返回";
+          mapHint.textContent = "高德路线规划失败，当前显示临时估算";
+          updateUI();
+        });
+      } catch {
+        if (seq !== mainRouteSeq) return;
+        state.routeSource = "高德路线规划不可用";
+        state.routeCongestion = "暂未返回";
+        mapHint.textContent = "高德路线规划不可用，请检查 Web JS API 权限";
+        updateUI();
+      }
+    }
+
+    function currentPlaceForPicking() {
+      if (state.pickerOpen) {
+        return state.picking === "start"
+          ? (state.draftStartPlace || state.startPlace)
+          : (state.draftEndPlace || state.endPlace);
+      }
+      return state.picking === "start" ? state.startPlace : state.endPlace;
+    }
+
+    function loadAmap() {
+      if (window.AMap) return Promise.resolve(window.AMap);
+      if (amapLoadPromise) return amapLoadPromise;
+      if (AMAP_SECURITY_JS_CODE) {
+        window._AMapSecurityConfig = { securityJsCode: AMAP_SECURITY_JS_CODE };
+      }
+      amapLoadPromise = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_JS_API_KEY}&plugin=AMap.PlaceSearch,AMap.Geocoder,AMap.AutoComplete,AMap.Driving,AMap.Transfer,AMap.Riding,AMap.Walking`;
+        script.async = true;
+        script.onload = () => window.AMap ? resolve(window.AMap) : reject(new Error("AMap not available"));
+        script.onerror = () => reject(new Error("AMap script failed"));
+        document.head.appendChild(script);
+      });
+      return amapLoadPromise;
+    }
+
+    async function ensureAmapReady() {
+      try {
+        const AMap = await loadAmap();
+        await new Promise((resolve) => {
+          const timer = setTimeout(resolve, 1600);
+          AMap.plugin(["AMap.PlaceSearch", "AMap.Geocoder", "AMap.AutoComplete", "AMap.Driving", "AMap.Transfer", "AMap.Riding", "AMap.Walking"], () => {
+            clearTimeout(timer);
+            resolve();
+          });
+        });
+        if (!amapMap) {
+          const place = currentPlaceForPicking();
+          amapMap = new AMap.Map("amapContainer", {
+            zoom: 13,
+            center: [place.lng, place.lat],
+            resizeEnable: true,
+            viewMode: "2D"
+          });
+          amapPlaceSearch = new AMap.PlaceSearch({ city: "全国", citylimit: false, pageSize: 10 });
+          amapAutoComplete = new AMap.AutoComplete({ city: "全国", citylimit: false });
+          amapGeocoder = new AMap.Geocoder();
+          amapMap.on("moveend", updatePendingPlaceFromMapCenter);
+          amapMap.on("complete", () => {
+            amapStaticMap.classList.remove("show");
+            mapLoadHint.textContent = "拖动地图，中心点即为选点";
+          });
+        }
+        amapStaticMap.classList.remove("show");
+        scheduleAmapTileFallback();
+        return true;
+      } catch {
+        showStaticAmapFallback();
+        return false;
+      }
+    }
+
+    function staticMapUrl(place = currentPlaceForPicking()) {
+      const lng = place.lng || 116.397428;
+      const lat = place.lat || 39.90923;
+      return `https://restapi.amap.com/v3/staticmap?location=${lng},${lat}&zoom=13&size=600*430&markers=mid,,A:${lng},${lat}&key=${AMAP_JS_API_KEY}`;
+    }
+
+    function showStaticAmapFallback(place = currentPlaceForPicking()) {
+      amapStaticMap.src = staticMapUrl(place);
+      amapStaticMap.classList.add("show");
+      mapLoadHint.textContent = "当前使用高德静态地图；JS 地图可能受 Key / 安全密钥 / 域名限制";
+    }
+
+    function scheduleAmapTileFallback() {
+      clearTimeout(amapTileFallbackTimer);
+      amapTileFallbackTimer = setTimeout(() => {
+        const tiles = document.querySelectorAll("#amapContainer img[src*='amap'], #amapContainer canvas");
+        if (!tiles.length) {
+          showStaticAmapFallback();
+        }
+      }, 1800);
+    }
+
+    function renderPoiResults(pois) {
+      nearbyList.innerHTML = "";
+      if (!pois.length) {
+        nearbyList.innerHTML = `<div class="nearby-item"><strong>没有找到地点</strong><span>换个关键词试试，或点击“在高德地图中打开”继续搜索</span></div>`;
+        return;
+      }
+      pois.slice(0, 6).forEach((poi) => {
+        const location = normalizeAmapLocation(poi.location || poi.lnglat);
+        const place = {
+          name: poi.name,
+          address: [poi.district, poi.address].filter(Boolean).join(" ") || poi.address || poi.district || "高德地图地点",
+          lng: location.lng,
+          lat: location.lat,
+          x: 160,
+          y: 84
+        };
+        const button = document.createElement("div");
+        button.className = "nearby-item";
+        button.setAttribute("role", "button");
+        button.tabIndex = 0;
+        button.innerHTML = `
+          <strong>${place.name}</strong>
+          <span>${place.address}</span>
+        `;
+        button.addEventListener("click", () => {
+          setPendingPlace(place);
+        });
+        button.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setPendingPlace(place);
+          }
+        });
+        nearbyList.appendChild(button);
+      });
+    }
+
+    function renderSearchMessage(title, detail) {
+      nearbyList.innerHTML = `<div class="nearby-item"><strong>${title}</strong><span>${detail}</span></div>`;
+      mapLoadHint.textContent = title;
+    }
+
+    async function runSearchFromInput() {
+      const keyword = pickerSearch.value.trim();
+      if (!keyword) {
+        updatePickerUI(false);
+        renderSearchMessage("输入关键词搜索地点", "例如：深圳、深圳北站、南山科技园");
+        return;
+      }
+      mapLoadHint.textContent = `正在用高德搜索“${keyword}”`;
+      nearbyList.innerHTML = `<div class="nearby-item"><strong>正在搜索“${keyword}”</strong><span>优先调用高德联想，失败会自动切到 POI 和地理编码</span></div>`;
+      const ready = await ensureAmapReady();
+      if (!ready) {
+        renderSearchMessage("高德 JS API 未加载成功", "请检查 Key、Web 服务、安全密钥和域名白名单");
+        return;
+      }
+      searchAmapPlaces(keyword);
+    }
+
+    function scheduleAmapSearch() {
+      clearTimeout(amapSearchTimer);
+      amapSearchTimer = setTimeout(runSearchFromInput, 260);
+    }
+
+    function searchAmapPlaces(keyword) {
+      if ((!amapAutoComplete && !amapPlaceSearch) || !keyword.trim()) {
+        nearbyList.innerHTML = `<div class="nearby-item"><strong>输入关键词搜索地点</strong><span>搜索结果来自高德地图 API</span></div>`;
+        return;
+      }
+      const query = keyword.trim();
+      const seq = ++amapSearchSeq;
+      if (amapAutoComplete) {
+        let continued = false;
+        const continueToPlaceSearch = () => {
+          if (continued || seq !== amapSearchSeq) return;
+          continued = true;
+          mapLoadHint.textContent = `正在用 POI 搜索“${query}”`;
+          searchAmapPlacesByPlaceSearch(query, seq);
+        };
+        const timer = setTimeout(continueToPlaceSearch, 1800);
+        amapAutoComplete.search(query, (status, result) => {
+          if (continued || seq !== amapSearchSeq) return;
+          clearTimeout(timer);
+          const tips = result?.tips?.filter((tip) => tip.name && tip.name !== "[]" && tip.district) || [];
+          if (status === "complete" && tips.length) {
+            continued = true;
+            mapLoadHint.textContent = `找到 ${tips.length} 个高德联想结果`;
+            renderPoiResults(tips);
+            return;
+          }
+          continueToPlaceSearch();
+        });
+        return;
+      }
+      searchAmapPlacesByPlaceSearch(query, seq);
+    }
+
+    function searchAmapPlacesByPlaceSearch(keyword, seq = amapSearchSeq) {
+      if (!amapPlaceSearch) {
+        searchAmapByGeocoder(keyword, seq);
+        return;
+      }
+      let continued = false;
+      const continueToGeocoder = () => {
+        if (continued || seq !== amapSearchSeq) return;
+        continued = true;
+        mapLoadHint.textContent = `正在解析“${keyword}”`;
+        searchAmapByGeocoder(keyword, seq);
+      };
+      const timer = setTimeout(continueToGeocoder, 2200);
+      amapPlaceSearch.search(keyword, (status, result) => {
+        if (continued || seq !== amapSearchSeq) return;
+        clearTimeout(timer);
+        if (status === "complete" && result.poiList?.pois) {
+          continued = true;
+          mapLoadHint.textContent = `找到 ${result.poiList.pois.length} 个高德地点`;
+          renderPoiResults(result.poiList.pois);
+        } else {
+          continueToGeocoder();
+        }
+      });
+    }
+
+    function searchAmapByGeocoder(keyword, seq = amapSearchSeq) {
+      if (!amapGeocoder) {
+        renderSearchMessage("地点搜索暂不可用", "高德搜索插件没有返回，请检查 Web端 JS API 搜索服务权限");
+        return;
+      }
+      let finished = false;
+      const timer = setTimeout(() => {
+        if (finished || seq !== amapSearchSeq) return;
+        finished = true;
+        renderSearchMessage("高德搜索没有响应", "请确认这个 Key 已开通 Web端 JS API 的地点搜索/地理编码服务；也可以点“在高德地图中打开”继续查找");
+      }, 2600);
+      amapGeocoder.getLocation(keyword, (status, result) => {
+        if (finished || seq !== amapSearchSeq) return;
+        finished = true;
+        clearTimeout(timer);
+        const geocodes = result?.geocodes || [];
+        const places = geocodes.map((item) => {
+          const location = normalizeAmapLocation(item.location);
+          return {
+            name: item.formattedAddress || keyword,
+            address: [item.province, item.city, item.district].filter(Boolean).join(" ") || "高德地理编码结果",
+            lng: location.lng,
+            lat: location.lat,
+            x: 160,
+            y: 84
+          };
+        }).filter((place) => place.lng && place.lat);
+        if (status === "complete" && places.length) {
+          mapLoadHint.textContent = `已解析“${keyword}”`;
+          renderPoiResults(places);
+          setPendingPlace(places[0]);
+          return;
+        }
+        renderSearchMessage("没有找到地点", "换个更具体的关键词，比如“深圳北站”或“南山科技园”");
+      });
+    }
+
+    function setPendingPlace(place, afterResolve) {
+      state.pendingPickPlace = { ...place };
+      if (place.lng && place.lat) {
+        if (amapMap) {
+          amapMap.setCenter([place.lng, place.lat]);
+          amapStaticMap.classList.remove("show");
+          mapLoadHint.textContent = "拖动地图，中心点即为选点";
+        } else {
+          showStaticAmapFallback(place);
+        }
+        updatePickerUI(false);
+        afterResolve?.();
+        return;
+      }
+      const query = [place.address, place.name].filter(Boolean).join(" ");
+      if (!amapGeocoder || !query) {
+        updatePickerUI(false);
+        afterResolve?.();
+        return;
+      }
+      let finished = false;
+      const timer = setTimeout(() => {
+        if (finished) return;
+        finished = true;
+        updatePickerUI(false);
+        afterResolve?.();
+      }, 1800);
+      amapGeocoder.getLocation(query, (status, result) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        const location = normalizeAmapLocation(result?.geocodes?.[0]?.location);
+        if (status === "complete" && location.lng && location.lat) {
+          state.pendingPickPlace = {
+            ...place,
+            lng: location.lng,
+            lat: location.lat
+          };
+          if (amapMap) {
+            amapMap.setCenter([location.lng, location.lat]);
+            amapStaticMap.classList.remove("show");
+            mapLoadHint.textContent = "拖动地图，中心点即为选点";
+          } else {
+            showStaticAmapFallback(state.pendingPickPlace);
+          }
+        }
+        updatePickerUI(false);
+        afterResolve?.();
+      });
+    }
+
+    function updatePendingPlaceFromMapCenter() {
+      if (!amapMap || !amapGeocoder) return;
+      const center = amapMap.getCenter();
+      amapGeocoder.getAddress(center, (status, result) => {
+        const address = status === "complete" && result.regeocode
+          ? result.regeocode.formattedAddress
+          : "高德地图中心点";
+        state.pendingPickPlace = {
+          name: address.split("市").pop()?.slice(0, 14) || "地图选点",
+          address,
+          lng: center.lng,
+          lat: center.lat,
+          x: 160,
+          y: 84
+        };
+        amapStaticMap.classList.remove("show");
+        updatePickerUI(false);
+      });
+    }
+
+    function writePlaceToRoute(kind, place) {
+      const nextPlace = { ...place };
+      if (kind === "start") {
+        state.startPlace = nextPlace;
+        startInput.value = nextPlace.name;
+      } else {
+        state.endPlace = nextPlace;
+        endInput.value = nextPlace.name;
+      }
+      recalculateRoute();
+      scheduleAmapRoutePlan();
+    }
+
+    function writePlaceToDraft(kind, place) {
+      const nextPlace = { ...place };
+      if (kind === "start") {
+        state.draftStartPlace = nextPlace;
+        state.draftStartConfirmed = true;
+      } else {
+        state.draftEndPlace = nextPlace;
+        state.draftEndConfirmed = true;
+      }
+    }
+
+    function commitDraftRoute() {
+      if (!state.draftStartConfirmed || !state.draftEndConfirmed || !state.draftStartPlace || !state.draftEndPlace) {
+        showToast("请先分别设置出发地和目的地");
+        return;
+      }
+      state.startPlace = { ...state.draftStartPlace };
+      state.endPlace = { ...state.draftEndPlace };
+      startInput.value = state.startPlace.name;
+      endInput.value = state.endPlace.name;
+      state.routeEditing = false;
+      closeMapPicker();
+      recalculateRoute();
+      scheduleAmapRoutePlan();
+      updateUI();
+      showToast("路线已保存");
+    }
+
+    function updatePickerUI(shouldSearch = true) {
+      const kindName = state.picking === "start" ? "出发地" : "目的地";
+      const place = state.pendingPickPlace || currentPlaceForPicking();
+      routePickerTitle.textContent = `设置通勤路线`;
+      pickerStartName.textContent = shortPlaceName(state.draftStartPlace || state.startPlace);
+      pickerEndName.textContent = shortPlaceName(state.draftEndPlace || state.endPlace);
+      pickerStartField.classList.toggle("active", state.picking === "start");
+      pickerEndField.classList.toggle("active", state.picking === "end");
+      pickerCurrentName.textContent = place.name;
+      pickerCurrentAddress.textContent = place.address;
+      const currentDraft = state.picking === "start" ? state.draftStartPlace : state.draftEndPlace;
+      const activeConfirmed = state.picking === "start" ? state.draftStartConfirmed : state.draftEndConfirmed;
+      const hasFreshCandidate = state.pendingPickPlace
+        && (!currentDraft || state.pendingPickPlace.name !== currentDraft.name || state.pendingPickPlace.address !== currentDraft.address);
+      pickerPrimaryAction.textContent = hasFreshCandidate
+        ? `设为${kindName}`
+        : (state.draftStartConfirmed && state.draftEndConfirmed ? "保存路线" : (activeConfirmed ? `继续设置${state.picking === "start" ? "目的地" : "出发地"}` : `设为${kindName}`));
+      if (!pickerSearch.value) pickerSearch.placeholder = `搜索${kindName}，例如 ${place.name}`;
+      if (shouldSearch) scheduleAmapSearch();
+    }
+
+    async function openMapPicker(kind) {
+      if (!requireMapPurchase()) return;
+      setPicking(kind);
+      state.pendingPickPlace = { ...currentPlaceForPicking() };
+      state.draftStartPlace = { ...state.startPlace };
+      state.draftEndPlace = { ...state.endPlace };
+      state.draftStartConfirmed = false;
+      state.draftEndConfirmed = false;
+      pickerSearch.value = "";
+      state.pickerOpen = true;
+      routePicker.classList.add("open");
+      showStaticAmapFallback(state.pendingPickPlace);
+      updatePickerUI(false);
+      const isReady = await ensureAmapReady();
+      if (isReady && amapMap) {
+        const place = currentPlaceForPicking();
+        if (place.lng && place.lat) amapMap.setCenter([place.lng, place.lat]);
+        amapMap.resize();
+        updatePendingPlaceFromMapCenter();
+      }
+    }
+
+    function closeMapPicker() {
+      state.pickerOpen = false;
+      routePicker.classList.remove("open");
+      state.pendingPickPlace = null;
+    }
+
+    function selectPlace(kind, poi) {
+      writePlaceToDraft(kind, poi);
+      state.pendingPickPlace = null;
+      state.picking = kind === "start" ? "end" : "start";
+      updatePickerUI(false);
+      showToast(`${kind === "start" ? "出发地" : "目的地"}已设置`);
+    }
+
+    function setPicking(kind) {
+      state.picking = kind;
+      if (state.pickerOpen) {
+        state.pendingPickPlace = { ...currentPlaceForPicking() };
+        updatePickerUI(false);
+      }
+    }
+
+    function weatherBuffer() {
+      if (!state.smartEnabled) return 0;
+      return state.precip > 60 ? state.heavyAdvance : state.precip > 30 ? state.rainAdvance : 0;
+    }
+
+    function commuteWeatherImpact() {
+      if (!state.commuteEnabled) return 0;
+      if (state.precip <= 30) return 0;
+      const heavy = state.precip > 60;
+      if (state.mode === "driving") return heavy ? 5 : 0;
+      if (state.mode === "transit") return heavy ? 10 : 5;
+      if (state.mode === "bicycling") return Math.ceil(state.routeKm * (heavy ? 5 : 2));
+      return Math.ceil(state.routeKm * (heavy ? 7 : 4));
+    }
+
+    function totalAdvance() {
+      return weatherBuffer() + commuteWeatherImpact();
+    }
+
+    function updateUI() {
+      const advance = totalAdvance();
+      const suggested = formatMinutes(parseMinutes(state.baseTime) - advance);
+      baseTimeLabel.textContent = state.baseTime;
+      weatherText.textContent = `${state.condition}，降水概率 ${state.precip}%`;
+      rainAdvance.textContent = `${state.rainAdvance} 分`;
+      heavyAdvance.textContent = `${state.heavyAdvance} 分`;
+      suggestedTime.textContent = suggested;
+      statusText.textContent = `明天${state.condition}，将提前 ${advance} 分钟响铃`;
+      const commuteImpact = commuteWeatherImpact();
+      const leaveTime = formatMinutes(parseMinutes(suggested) + 45);
+      const arriveTime = formatMinutes(parseMinutes(leaveTime) + state.routeMinutes);
+      heroAdvance.textContent = `${advance} 分`;
+      heroRoute.textContent = `${commuteImpact} 分`;
+      heroWeather.textContent = state.condition;
+      scriptWake.textContent = suggested;
+      scriptLeave.textContent = leaveTime;
+      scriptArrive.textContent = arriveTime;
+      comfortLine.textContent = advance > 0
+        ? `我会在 ${suggested} 轻轻叫醒你，把雨势和${modeNames[state.mode]}通勤都算进去。`
+        : `天气看起来很稳，保持 ${state.baseTime} 的节奏就好。`;
+      moodStatusText.textContent = advance > 0
+        ? `雨和路都算进去了，明早 ${suggested} 开始，节奏会更松一点。`
+        : "不用额外提前，今晚可以安心把睡眠留完整。";
+      insightText.textContent = advance > 0
+        ? `天气缓冲 ${weatherBuffer()} 分钟，${modeNames[state.mode]}通勤再预留 ${commuteImpact} 分钟，给你一个不慌的早晨。`
+        : "明天早晨降水概率不高，先不额外提前，让睡眠时间保持完整。";
+      widgetSmallStatus.textContent = statusText.textContent;
+      widgetMediumStatus.textContent = statusText.textContent;
+      widgetSmallTime.textContent = state.baseTime;
+      widgetMediumTime.textContent = suggested;
+      const startName = shortPlaceName(state.startPlace);
+      const endName = shortPlaceName(state.endPlace);
+      routeText.textContent = `${modeNames[state.mode]}：${startName} → ${endName}，${state.routeSource}约 ${state.routeMinutes} 分钟`;
+      routeHelp.textContent = `路线距离约 ${state.routeKm} 公里；拥堵情况：${state.routeCongestion}；雨雪影响额外 +${commuteWeatherImpact()} 分钟。`;
+      savedRouteTitle.textContent = `${startName} → ${endName}`;
+      savedRouteMeta.textContent = `${modeNames[state.mode]}，${state.routeSource}约 ${state.routeMinutes} 分钟，距离约 ${state.routeKm} 公里，${state.routeCongestion}`;
+      mapStart.textContent = startName;
+      mapMode.textContent = `${modeNames[state.mode]} ${state.routeMinutes} 分钟`;
+      mapEnd.textContent = endName;
+      routeEditor.classList.toggle("hidden", !state.routeEditing);
+      routeSaved.classList.toggle("hidden", state.routeEditing);
+      routeAction.textContent = canUseGaodeFeature() ? (state.routeEditing ? "保存路线" : "编辑路线") : "解锁地图路线";
+      routeMap.classList.toggle("saved", !state.routeEditing);
+      setPicking(state.picking);
+      smartToggle.classList.toggle("on", state.smartEnabled);
+      smartToggle.setAttribute("aria-pressed", String(state.smartEnabled));
+      commuteToggle.classList.toggle("on", state.commuteEnabled);
+      commuteToggle.setAttribute("aria-pressed", String(state.commuteEnabled));
+      smartFoot.textContent = state.subscribed
+        ? "已解锁。天气开关负责真实 WeatherKit + AlarmKit；地图开关会把高德通勤耗时加入提前量。"
+        : "未购买时无法开启。订阅后才会启用真实天气检测、通勤预留和系统闹钟自动调整。";
+      updatePlanCards();
+    }
+
+    document.querySelector("#openPaywall").addEventListener("click", () => setPaywall(true));
+    document.querySelector("#closePaywall").addEventListener("click", () => {
+      const shouldLeave = window.confirm("这张 51% 新人优惠券只为本次打开保留。现在离开，下次可能就要按 598 元原价购买。确定先不领取吗？");
+      if (shouldLeave) {
+        showToast("已为你保留到本次会话结束，回来还能领取 298 元永久购买权");
+        setPaywall(false);
+      }
+    });
+    openInvite.addEventListener("click", () => setInvitePanel(true));
+    closeInvite.addEventListener("click", () => setInvitePanel(false));
+    shareInvite.addEventListener("click", () => {
+      showToast("正式 iOS 版会打开系统分享面板");
+    });
+    closeCrowdPaywall.addEventListener("click", () => setCrowdPaywall(false));
+    crowdLater.addEventListener("click", () => setCrowdPaywall(false));
+
+    document.querySelectorAll(".crowd-card").forEach((button) => {
+      button.addEventListener("click", () => {
+        setCrowdPaywall(true, button.dataset.crowd);
+      });
+    });
+
+    supportCrowd.addEventListener("click", () => {
+      const feature = crowdFeatures[state.selectedCrowdFeature];
+      showToast(`正式 iOS 版会打开 StoreKit 支付：${feature.title} ${feature.amount} 元`);
+    });
+
+    morningHero.addEventListener("mousemove", (event) => {
+      const rect = morningHero.getBoundingClientRect();
+      const x = (event.clientX - rect.left) / rect.width - 0.5;
+      const y = (event.clientY - rect.top) / rect.height - 0.5;
+      morningHero.style.setProperty("--tilt-x", `${(-y * 4).toFixed(2)}deg`);
+      morningHero.style.setProperty("--tilt-y", `${(x * 5).toFixed(2)}deg`);
+    });
+
+    morningHero.addEventListener("mouseleave", () => {
+      morningHero.style.setProperty("--tilt-x", "0deg");
+      morningHero.style.setProperty("--tilt-y", "0deg");
+    });
+
+    authModeToggle.addEventListener("click", () => {
+      state.authRegister = !state.authRegister;
+      updateAuthUI();
+    });
+
+    authSubmit.addEventListener("click", () => {
+      showToast("Web 预览不提交账号密码");
+      authMessage.textContent = state.authRegister
+        ? "创建账号会走后端 /auth/register，密码只会发送到 HTTPS API。"
+        : "登录会走后端 /auth/login，成功后 token 存入 iOS Keychain。";
+    });
+
+    smartToggle.addEventListener("click", () => {
+      if (!canUseWeatherFeature()) {
+        state.pendingUnlockTarget = "weather";
+        showToast("购买后才能开启安心模式");
+        setPaywall(true);
+        return;
+      }
+      state.smartEnabled = !state.smartEnabled;
+      updateUI();
+    });
+
+    commuteToggle.addEventListener("click", () => {
+      if (!canUseGaodeFeature()) {
+        state.pendingUnlockTarget = "commute";
+        showToast("购买后才能开启地图智能调整");
+        setPaywall(true);
+        return;
+      }
+      state.commuteEnabled = !state.commuteEnabled;
+      updateUI();
+    });
+
+    document.querySelectorAll(".plan").forEach((button) => {
+      button.addEventListener("click", () => {
+        const product = button.dataset.product;
+        if (product === "weather_monthly" || product === "weather_yearly") state.weatherEntitled = true;
+        if (product === "gaode") state.gaodeEntitled = true;
+        if (product === "forever") {
+          state.foreverEntitled = true;
+          state.weatherEntitled = true;
+          state.gaodeEntitled = true;
+        }
+        syncEntitlements();
+        if (state.pendingUnlockTarget === "weather" && canUseWeatherFeature()) state.smartEnabled = true;
+        if (state.pendingUnlockTarget === "commute" && canUseGaodeFeature()) state.commuteEnabled = true;
+        state.pendingUnlockTarget = null;
+        setPaywall(false);
+        const copy = productCopy[product];
+        showToast(`${copy?.title || "服务"}已解锁`);
+        updateUI();
+      });
+    });
+
+    document.querySelector("#restore").addEventListener("click", () => {
+      state.weatherEntitled = true;
+      state.gaodeEntitled = true;
+      syncEntitlements();
+      state.pendingUnlockTarget = null;
+      setPaywall(false);
+      showToast("购买已恢复");
+      updateUI();
+    });
+
+    timeInput.addEventListener("input", () => {
+      state.baseTime = timeInput.value;
+      updateUI();
+    });
+
+    document.querySelectorAll("[data-step]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const key = button.dataset.step === "rain" ? "rainAdvance" : "heavyAdvance";
+        state[key] = Math.max(0, Math.min(120, state[key] + Number(button.dataset.delta)));
+        if (state.heavyAdvance < state.rainAdvance) state.heavyAdvance = state.rainAdvance;
+        updateUI();
+      });
+    });
+
+    modeSelect.addEventListener("change", () => {
+      if (!requireMapPurchase()) {
+        modeSelect.value = state.mode;
+        return;
+      }
+      state.mode = modeSelect.value;
+      recalculateRoute();
+      scheduleAmapRoutePlan();
+      updateUI();
+    });
+
+    startInput.addEventListener("click", () => openMapPicker("start"));
+    startInput.addEventListener("focus", () => openMapPicker("start"));
+    endInput.addEventListener("click", () => openMapPicker("end"));
+    endInput.addEventListener("focus", () => openMapPicker("end"));
+
+    routeMap.addEventListener("click", (event) => {
+      if (!requireMapPurchase()) return;
+      if (!state.routeEditing) return;
+      openMapPicker(state.picking);
+    });
+
+    closeRoutePicker.addEventListener("click", closeMapPicker);
+
+    swapPickKind.addEventListener("click", () => {
+      setPicking(state.picking === "start" ? "end" : "start");
+    });
+
+    pickerStartField.addEventListener("click", () => setPicking("start"));
+    pickerEndField.addEventListener("click", () => setPicking("end"));
+
+    swapRoutePlaces.addEventListener("click", () => {
+      const oldStart = state.draftStartPlace || state.startPlace;
+      state.draftStartPlace = state.draftEndPlace || state.endPlace;
+      state.draftEndPlace = oldStart;
+      const oldStartConfirmed = state.draftStartConfirmed;
+      state.draftStartConfirmed = state.draftEndConfirmed;
+      state.draftEndConfirmed = oldStartConfirmed;
+      state.pendingPickPlace = { ...currentPlaceForPicking() };
+      updatePickerUI(false);
+      showToast("已交换出发地和目的地");
+    });
+
+    pickerSearch.addEventListener("input", () => {
+      scheduleAmapSearch();
+    });
+
+    pickerSearch.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        clearTimeout(amapSearchTimer);
+        runSearchFromInput();
+      }
+    });
+
+    locateMe.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!navigator.geolocation || !amapMap) {
+        showToast("定位不可用，请在高德地图中拖动选择");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          amapMap.setCenter([position.coords.longitude, position.coords.latitude]);
+          updatePendingPlaceFromMapCenter();
+        },
+        () => showToast("定位失败，请检查浏览器权限")
+      );
+    });
+
+    openAmapExternal.addEventListener("click", () => {
+      const place = state.pendingPickPlace || currentPlaceForPicking();
+      const keyword = pickerSearch.value.trim() || place.name || place.address || "北京";
+      const query = encodeURIComponent(keyword);
+      window.open(`https://uri.amap.com/search?keyword=${query}&coordinate=gaode&callnative=0`, "_blank");
+    });
+
+    pickerPrimaryAction.addEventListener("click", () => {
+      const currentDraft = state.picking === "start" ? state.draftStartPlace : state.draftEndPlace;
+      const hasFreshCandidate = state.pendingPickPlace
+        && (!currentDraft || state.pendingPickPlace.name !== currentDraft.name || state.pendingPickPlace.address !== currentDraft.address);
+      if (hasFreshCandidate || !currentDraft) {
+        selectPlace(state.picking, state.pendingPickPlace || currentPlaceForPicking());
+        return;
+      }
+      if (!(state.draftStartConfirmed && state.draftEndConfirmed)) {
+        setPicking(state.picking === "start" ? "end" : "start");
+        return;
+      }
+      commitDraftRoute();
+    });
+
+    routeAction.addEventListener("click", () => {
+      if (!requireMapPurchase()) return;
+      if (state.routeEditing) {
+        state.routeEditing = false;
+        showToast("路线已保存");
+      } else {
+        state.routeEditing = true;
+        showToast("点击出发地或目的地输入框重新选择");
+      }
+      updateUI();
+    });
+
+    tabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tabs.forEach((item) => item.classList.remove("active"));
+        tab.classList.add("active");
+        const view = tab.dataset.view;
+        setAuthVisible(view === "auth");
+        setPaywall(view === "paywall");
+        if (view !== "main") setCrowdPaywall(false);
+        if (view !== "main") setInvitePanel(false);
+        if (view !== "paywall") setPaywall(false);
+        if (view !== "auth") setAuthVisible(false);
+        closeMapPicker();
+        mainNotes.classList.toggle("hidden", view === "widget" || view === "auth");
+        authNotes.classList.toggle("hidden", view !== "auth");
+        widgetNotes.classList.toggle("hidden", view !== "widget");
+      });
+    });
+
+    recalculateRoute();
+    updateAuthUI();
+    updateUI();
+    scheduleAmapRoutePlan();
+  </script>
+</body>
+</html>
