@@ -158,12 +158,12 @@ jobs:
 
           if [[ "${archive_status}" -ne 0 ]]; then
             echo "::group::xcodebuild archive error summary"
-            grep -nE "error:|warning:|No such module|Signing|Provisioning|entitlement|Bundle identifier|requires a provisioning profile|BUILD FAILED" build-logs/archive.log || true
+            grep -nE "error:|Error|failed|Failed|warning:|No such module|No profiles|No Account|Signing|Provisioning|provisioning|entitlement|Bundle identifier|requires a provisioning profile|Authentication|Team|BUILD FAILED" build-logs/archive.log || true
             echo "--- Last 300 lines ---"
             tail -300 build-logs/archive.log || true
             echo "::endgroup::"
 
-            summary="$(grep -nE "error:|No such module|Signing|Provisioning|entitlement|Bundle identifier|requires a provisioning profile|BUILD FAILED" build-logs/archive.log | tail -20 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' || true)"
+            summary="$(grep -nE "error:|Error|failed|Failed|No such module|No profiles|No Account|Signing|Provisioning|provisioning|entitlement|Bundle identifier|requires a provisioning profile|Authentication|Team|BUILD FAILED" build-logs/archive.log | tail -20 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' || true)"
             if [[ -n "${summary}" ]]; then
               echo "::error title=xcodebuild archive failed::${summary}"
             else
@@ -173,6 +173,11 @@ jobs:
             tail_summary="$(tail -300 build-logs/archive.log | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' || true)"
             if [[ -n "${tail_summary}" ]]; then
               echo "::error title=xcodebuild archive last 300 lines::${tail_summary}"
+            fi
+
+            compact_tail="$(tail -300 build-logs/archive.log | sed 's/%/%25/g;s/\r/%0D/g' | tr '\n' ' ' | cut -c 1-12000 || true)"
+            if [[ -n "${compact_tail}" ]]; then
+              echo "::error title=xcodebuild archive compact tail::${compact_tail}"
             fi
 
             exit "${archive_status}"
