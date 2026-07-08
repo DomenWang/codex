@@ -12,23 +12,17 @@ struct WeatherAlarmApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if authSession.isSignedIn {
-                    ContentView(subscriptionStore: subscriptionStore)
-                        .environmentObject(dependencies.toastCenter)
-                        .environmentObject(authSession)
-                } else {
-                    LoginView(viewModel: authSession)
+            ContentView(subscriptionStore: subscriptionStore)
+                .environmentObject(dependencies.toastCenter)
+                .environmentObject(authSession)
+                .task {
+                    await authSession.restoreSession()
+                    await subscriptionStore.loadProductsAndEntitlements()
+                    await restoreWarningNotifier.scheduleIfNeeded()
                 }
-            }
-            .task {
-                await authSession.restoreSession()
-                await subscriptionStore.loadProductsAndEntitlements()
-                await restoreWarningNotifier.scheduleIfNeeded()
-            }
-            .onOpenURL { url in
-                referralStateStore.handleInviteURL(url)
-            }
+                .onOpenURL { url in
+                    referralStateStore.handleInviteURL(url)
+                }
         }
     }
 }
