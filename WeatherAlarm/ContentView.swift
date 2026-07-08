@@ -15,7 +15,7 @@ struct ContentView: View {
     @State private var isPurchaseReminderPresented = false
     @AppStorage("ww_pending_friend_coupon") private var hasPendingFriendCoupon = false
 
-    init(subscriptionStore: StoreKitSubscriptionStore = StoreKitSubscriptionStore()) {
+    init(subscriptionStore: StoreKitSubscriptionStore) {
         self.subscriptionStore = subscriptionStore
     }
 
@@ -345,7 +345,7 @@ struct ContentView: View {
 
 #Preview {
     if #available(iOS 26.0, *) {
-        ContentView()
+        ContentView(subscriptionStore: StoreKitSubscriptionStore())
             .environmentObject(ToastMessageCenter())
             .environmentObject(AuthSessionViewModel())
     }
