@@ -129,7 +129,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p build
+          mkdir -p build build-logs
 
           common_args=(
             -scheme "${SCHEME}"
@@ -144,11 +144,42 @@ jobs:
             archive
           )
 
+          archive_status=0
+
+          set +e
           if [[ -n "${XCODE_WORKSPACE}" ]]; then
-            xcodebuild -workspace "${XCODE_WORKSPACE}" "${common_args[@]}"
+            xcodebuild -workspace "${XCODE_WORKSPACE}" "${common_args[@]}" 2>&1 | tee build-logs/archive.log
+            archive_status=${PIPESTATUS[0]}
           else
-            xcodebuild -project "${XCODE_PROJECT}" "${common_args[@]}"
+            xcodebuild -project "${XCODE_PROJECT}" "${common_args[@]}" 2>&1 | tee build-logs/archive.log
+            archive_status=${PIPESTATUS[0]}
           fi
+          set -e
+
+          if [[ "${archive_status}" -ne 0 ]]; then
+            echo "::group::xcodebuild archive error summary"
+            grep -nE "error:|warning:|No such module|Signing|Provisioning|entitlement|Bundle identifier|requires a provisioning profile|BUILD FAILED" build-logs/archive.log || true
+            echo "--- Last 300 lines ---"
+            tail -300 build-logs/archive.log || true
+            echo "::endgroup::"
+
+            summary="$(grep -nE "error:|No such module|Signing|Provisioning|entitlement|Bundle identifier|requires a provisioning profile|BUILD FAILED" build-logs/archive.log | tail -20 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' || true)"
+            if [[ -n "${summary}" ]]; then
+              echo "::error title=xcodebuild archive failed::${summary}"
+            else
+              echo "::error title=xcodebuild archive failed::See archive.log artifact for details."
+            fi
+
+            exit "${archive_status}"
+          fi
+
+      - name: Upload archive logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: app-store-archive-logs
+          path: build-logs
+          if-no-files-found: ignore
 
       - name: Export IPA
         shell: bash
