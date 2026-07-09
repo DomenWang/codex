@@ -62,6 +62,11 @@ enum StoreKitSubscriptionError: Error {
 /// `hasPremiumAccess` 才会变成 true，智能天气调整开关才能启用。
 @MainActor
 final class StoreKitSubscriptionStore: ObservableObject {
+    /// TestFlight convenience build: unlock all paid feature gates so device testing can
+    /// focus on WeatherKit, AMap, AlarmKit, and UI flows before App Store products are finalized.
+    /// This does not mock WeatherKit or route API responses; it only bypasses StoreKit gating.
+    private static let unlockAllFeaturesForTestFlight = true
+
     @Published private(set) var products: [Product] = []
     @Published private(set) var hasPremiumAccess = false
     @Published private(set) var hasPurchasedForever = false
@@ -80,11 +85,32 @@ final class StoreKitSubscriptionStore: ObservableObject {
     ) {
         self.referralStateStore = referralStateStore
         self.snapshotStore = snapshotStore
+        if Self.unlockAllFeaturesForTestFlight {
+            hasPremiumAccess = true
+            hasPurchasedForever = true
+            isWeatherSubscribed = true
+            hasGaodeEnhance = true
+            supportedCrowdfundingProductIDs = Set(WeatherAlarmProductID.crowdfundingProducts)
+        }
         updatesTask = observeTransactionUpdates()
     }
 
     func loadProductsAndEntitlements() async {
         state = .loading
+
+        if Self.unlockAllFeaturesForTestFlight {
+            do {
+                products = try await Product.products(for: WeatherAlarmProductID.all)
+                    .sorted { left, right in
+                        sortIndex(for: left.id) < sortIndex(for: right.id)
+                    }
+            } catch {
+                products = []
+            }
+            await refreshEntitlements()
+            state = .idle
+            return
+        }
 
         do {
             products = try await Product.products(for: WeatherAlarmProductID.all)
@@ -168,13 +194,31 @@ final class StoreKitSubscriptionStore: ObservableObject {
                     await self.refreshEntitlements()
                     await transaction.finish()
                 } catch {
-                    self.hasPremiumAccess = false
+                    if !Self.unlockAllFeaturesForTestFlight {
+                        self.hasPremiumAccess = false
+                    }
                 }
             }
         }
     }
 
     private func refreshEntitlements() async {
+        if Self.unlockAllFeaturesForTestFlight {
+            hasPurchasedForever = true
+            isWeatherSubscribed = true
+            hasGaodeEnhance = true
+            hasPremiumAccess = true
+            supportedCrowdfundingProductIDs = Set(WeatherAlarmProductID.crowdfundingProducts)
+            snapshotStore.saveSnapshot(
+                hasPurchasedForever: true,
+                isWeatherSubscribed: true,
+                hasGaodeEnhance: true,
+                weatherExpireDate: nil,
+                gaodeExpireDate: nil
+            )
+            return
+        }
+
         var ownsForever = false
         var ownsWeatherSubscription = false
         var ownsGaodeEnhance = false

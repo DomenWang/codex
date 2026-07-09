@@ -23,10 +23,8 @@ enum CommuteMode: String, CaseIterable, Codable, Hashable, Identifiable {
         }
     }
 
-    /// 雨雪对不同通勤方式的额外影响。
-    ///
-    /// 这不是天气 Mock，也不是路线 Mock。它只是在拿到真实 WeatherKit 降水概率、
-    /// 真实高德路线距离后，根据出行方式估算“因为雨雪需要额外预留的分钟数”。
+    /// 根据真实 WeatherKit 降水概率和高德返回的真实路线距离，估算雨雪对不同出行方式的额外影响。
+    /// 这不是天气或路线 Mock，只是业务规则。
     func weatherImpactMinutes(
         distanceMeters: Double?,
         weatherCondition: String,

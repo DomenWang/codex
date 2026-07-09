@@ -42,8 +42,8 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        NSAlarmKitUsageDescription: 根据早晨天气和路况提前您的起床闹钟。
-        NSLocationWhenInUseUsageDescription: 用于获取您所在位置的真实天气预报。
+        NSAlarmKitUsageDescription: Used to adjust your wake-up alarm based on tomorrow morning weather and commute conditions.
+        NSLocationWhenInUseUsageDescription: Used to request your current location for real WeatherKit forecasts.
         AMapWebServiceAPIKey: ae9b87a9bed26996b16ff1d016c57324
         AuthAPIBaseURL: https://domenwang-weather-alarm-auth.onrender.com
         BGTaskSchedulerPermittedIdentifiers:

@@ -1,9 +1,7 @@
 import Foundation
 
 /// 最近一次真实天气/路况检查后的用户可见状态。
-///
-/// 这不是 Mock 数据。只有 WeatherKit + AlarmKit 调度链路真实完成后，
-/// AlarmManager 才会写入这个状态，主界面和 Widget 只负责读取展示。
+/// 这不是 Mock 数据；只有 WeatherKit、TransitService 或 AlarmKit 链路真实完成后才会写入。
 struct WeatherAlarmStatus: Codable, Equatable {
     let generatedAt: Date
     let baseWakeUpDate: Date
@@ -22,4 +20,3 @@ struct WeatherAlarmStatus: Codable, Equatable {
         return "明天\(weatherCondition)，按基础起床时间响铃"
     }
 }
-

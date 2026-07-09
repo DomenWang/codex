@@ -1,4 +1,5 @@
 import Combine
+import CoreLocation
 import Foundation
 
 @MainActor
@@ -6,6 +7,7 @@ import Foundation
 final class WeatherAlarmSettingsViewModel: ObservableObject {
     @Published private(set) var settings: AlarmSettings?
     @Published private(set) var latestStatus: WeatherAlarmStatus?
+    @Published private(set) var latestMorningSummary: MorningWeatherSummary?
     @Published var selectedWakeUpTime: Date
     @Published var rainAdvanceMinutes: Int
     @Published var heavyRainAdvanceMinutes: Int
@@ -14,21 +16,29 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
     @Published var commuteCity: String
     @Published var selectedCommuteMode: CommuteMode
     @Published private(set) var commuteSyncMessage: String?
+    @Published private(set) var weatherRefreshMessage: String?
     @Published private(set) var isSyncingCommuteRoute = false
+    @Published private(set) var isRefreshingWeather = false
 
     private let settingsStore: AlarmSettingsStore
     private let statusStore: WeatherAlarmStatusStore
+    private let weatherService: WeatherService
+    private let weatherSummaryCacheStore: WeatherSummaryCacheStore
     private let transitService: TransitService
     private let calendar: Calendar
 
     init(
         settingsStore: AlarmSettingsStore = AlarmSettingsStore(),
         statusStore: WeatherAlarmStatusStore = WeatherAlarmStatusStore(),
+        weatherService: WeatherService = WeatherService(),
+        weatherSummaryCacheStore: WeatherSummaryCacheStore = WeatherSummaryCacheStore(),
         transitService: TransitService = TransitService(),
         calendar: Calendar = .current
     ) {
         self.settingsStore = settingsStore
         self.statusStore = statusStore
+        self.weatherService = weatherService
+        self.weatherSummaryCacheStore = weatherSummaryCacheStore
         self.transitService = transitService
         self.calendar = calendar
         self.selectedWakeUpTime = Date()
@@ -50,20 +60,32 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
     }
 
     var tomorrowStatusText: String {
-        latestStatus?.summaryText ?? "尚未完成明日天气检查"
+        if let latestStatus {
+            return latestStatus.summaryText
+        }
+
+        if let latestMorningSummary {
+            return "已获取明早天气，设置基础起床时间后生成闹钟建议"
+        }
+
+        return "尚未完成明日天气检查"
     }
 
     var tomorrowWeatherText: String {
-        guard let latestStatus else {
-            return "尚未获取明日 6:00-9:00 天气"
+        if let latestStatus {
+            return "\(latestStatus.weatherCondition)，降水概率 \(Int(latestStatus.precipitationChancePercent.rounded()))%"
         }
 
-        return "\(latestStatus.weatherCondition)，降水概率 \(Int(latestStatus.precipitationChancePercent.rounded()))%"
+        if let latestMorningSummary {
+            return "\(latestMorningSummary.weatherCondition)，降水概率 \(Int(latestMorningSummary.precipitationChancePercent.rounded()))%"
+        }
+
+        return "等待授权定位后获取明早 6:00-9:00 天气"
     }
 
     var suggestedAlarmTimeText: String {
         guard let latestStatus else {
-            return "等待后台天气检查后生成建议"
+            return "获取天气并设置起床时间后生成建议"
         }
 
         return DateFormatter.weatherAlarmTime.string(from: latestStatus.scheduledWakeUpDate)
@@ -71,13 +93,20 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
 
     var commuteRouteText: String {
         guard let route = settings?.commuteRoute else {
-            return "未设置"
+            return "未保存通勤路线"
         }
 
         let start = route.startName ?? "出发地"
         let end = route.endName ?? "目的地"
         let minutes = Int((route.baseDurationSeconds / 60).rounded())
-        return "\(route.effectiveMode.displayName)：\(start) → \(end)，基础约 \(minutes) 分钟"
+        let distanceText: String
+        if let distance = route.baseDistanceMeters {
+            distanceText = String(format: "，约 %.1f 公里", distance / 1000)
+        } else {
+            distanceText = ""
+        }
+
+        return "\(route.effectiveMode.displayName)：\(start) → \(end)，高德预估 \(minutes) 分钟\(distanceText)"
     }
 
     var isSmartAdjustmentEnabled: Bool {
@@ -91,6 +120,7 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
     func reload() {
         settings = try? settingsStore.loadSettings()
         latestStatus = statusStore.loadLatestStatus()
+        latestMorningSummary = weatherSummaryCacheStore.loadValidSummary()
 
         if let settings,
            let date = calendar.date(
@@ -118,6 +148,7 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
         }
 
         settings = try? settingsStore.saveWakeUpTime(hour: hour, minute: minute)
+        buildVisibleStatusIfPossible()
     }
 
     func setSmartAdjustmentEnabled(_ isEnabled: Bool) throws {
@@ -141,6 +172,27 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
         )
 
         settings = try? settingsStore.saveWeatherAdjustmentSettings(adjustmentSettings)
+        buildVisibleStatusIfPossible()
+    }
+
+    func refreshWeatherWithCurrentLocation(_ location: CLLocation) async -> Bool {
+        isRefreshingWeather = true
+        weatherRefreshMessage = nil
+        defer {
+            isRefreshingWeather = false
+        }
+
+        do {
+            let summary = try await weatherService.fetchMorningPrecipitationSummary(for: location)
+            latestMorningSummary = summary
+            weatherSummaryCacheStore.save(summary)
+            buildVisibleStatusIfPossible()
+            weatherRefreshMessage = "已用 WeatherKit 获取真实明早天气"
+            return true
+        } catch {
+            weatherRefreshMessage = "天气获取失败：请检查定位权限、WeatherKit 能力或网络"
+            return false
+        }
     }
 
     func syncCommuteRouteWithAMap() async {
@@ -161,12 +213,50 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
                 city: commuteCity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : commuteCity
             )
             settings = try settingsStore.saveCommuteRoute(route)
-            commuteSyncMessage = "通勤路线已同步"
+            commuteStartAddress = route.startName ?? commuteStartAddress
+            commuteEndAddress = route.endName ?? commuteEndAddress
+            commuteCity = route.city ?? commuteCity
+            commuteSyncMessage = "路线已保存，高德预估时间已同步"
+        } catch TransitServiceError.missingTransitCity {
+            commuteSyncMessage = "公交路线需要填写城市"
         } catch {
-            commuteSyncMessage = "高德路线同步失败，请检查 API Key 或网络"
+            commuteSyncMessage = "高德路线同步失败，请检查 API Key、地址或网络"
         }
 
         isSyncingCommuteRoute = false
+    }
+
+    private func buildVisibleStatusIfPossible() {
+        guard let settings,
+              let summary = latestMorningSummary,
+              let baseWakeUpDate = settings.nextBaseWakeUpDate(calendar: calendar) else {
+            latestStatus = statusStore.loadLatestStatus()
+            return
+        }
+
+        let weatherBuffer = settings.effectiveWeatherAdjustmentSettings.weatherBufferMinutes(
+            weatherCondition: summary.weatherCondition,
+            precipitationChancePercent: summary.precipitationChancePercent
+        )
+        let scheduledWakeUpDate = calendar.date(
+            byAdding: .minute,
+            value: -weatherBuffer,
+            to: baseWakeUpDate
+        ) ?? baseWakeUpDate.addingTimeInterval(TimeInterval(-weatherBuffer * 60))
+
+        let status = WeatherAlarmStatus(
+            generatedAt: Date(),
+            baseWakeUpDate: baseWakeUpDate,
+            scheduledWakeUpDate: scheduledWakeUpDate,
+            advanceMinutes: weatherBuffer,
+            weatherBufferMinutes: weatherBuffer,
+            commuteDelayMinutes: 0,
+            weatherCondition: summary.weatherCondition,
+            precipitationChancePercent: summary.precipitationChancePercent
+        )
+
+        statusStore.save(status)
+        latestStatus = status
     }
 }
 

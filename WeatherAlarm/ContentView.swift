@@ -1,11 +1,12 @@
+import MapKit
 import SwiftUI
 
 @available(iOS 26.0, *)
 @MainActor
 struct ContentView: View {
     @EnvironmentObject private var toastCenter: ToastMessageCenter
-    @EnvironmentObject private var authSession: AuthSessionViewModel
     @StateObject private var settingsViewModel = WeatherAlarmSettingsViewModel()
+    @StateObject private var locationProvider = WeatherAlarmLocationProvider()
     @ObservedObject private var subscriptionStore: StoreKitSubscriptionStore
     @StateObject private var couponStore = WeatherWakeCouponStore()
     private let restoreWarningNotifier = PurchaseRestoreWarningNotifier()
@@ -13,6 +14,7 @@ struct ContentView: View {
     @State private var isInvitePresented = false
     @State private var isCrowdfundingPresented = false
     @State private var isPurchaseReminderPresented = false
+    @State private var hasRequestedInitialWeather = false
     @AppStorage("ww_pending_friend_coupon") private var hasPendingFriendCoupon = false
 
     init(subscriptionStore: StoreKitSubscriptionStore) {
@@ -27,56 +29,52 @@ struct ContentView: View {
                         baseTimeText: settingsViewModel.baseWakeUpTimeText,
                         suggestedTimeText: settingsViewModel.suggestedAlarmTimeText,
                         statusText: settingsViewModel.tomorrowStatusText,
-                        weatherText: settingsViewModel.tomorrowWeatherText
+                        weatherText: settingsViewModel.tomorrowWeatherText,
+                        isRefreshing: settingsViewModel.isRefreshingWeather
                     )
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 8, trailing: 16))
                     .listRowBackground(Color.clear)
                 }
 
                 Section {
-                    Toggle(
-                        "智能天气调整",
+                    PremiumToggleRow(
+                        title: "智能天气调整",
+                        subtitle: "明早有雨雪时，自动提前系统闹钟。",
+                        isUnlocked: subscriptionStore.hasPremiumAccess,
                         isOn: Binding(
-                            get: {
-                                settingsViewModel.isSmartAdjustmentEnabled
-                            },
+                            get: { settingsViewModel.isSmartAdjustmentEnabled },
                             set: { newValue in
                                 handleSmartAdjustmentToggle(newValue)
                             }
                         )
                     )
 
-                    Toggle(
-                        "地图通勤智能调整",
+                    PremiumToggleRow(
+                        title: "地图通勤智能调整",
+                        subtitle: "把高德路线预估、拥堵和雨雪影响一起算进起床时间。",
+                        isUnlocked: subscriptionStore.hasGaodeEnhance || subscriptionStore.hasPremiumAccess,
                         isOn: Binding(
-                            get: {
-                                settingsViewModel.isCommuteAdjustmentEnabled
-                            },
+                            get: { settingsViewModel.isCommuteAdjustmentEnabled },
                             set: { newValue in
                                 handleCommuteAdjustmentToggle(newValue)
                             }
                         )
                     )
                 } footer: {
-                    if subscriptionStore.hasPremiumAccess {
-                        Text("天气智能调整已解锁。地图开关开启后，会把高德通勤耗时加入提前量。")
-                    } else if subscriptionStore.hasGaodeEnhance {
-                        Text("地图通勤智能调整已解锁。天气智能调整仍需订阅或永久买断。")
-                    } else {
-                        Text("未购买时无法开启。订阅后才会启用真实天气检测、地图通勤预留和系统闹钟自动调整。")
-                    }
+                    Text(subscriptionStore.hasPremiumAccess ? "TestFlight 测试版已解锁全部付费能力，方便你先验证真实天气、路线和闹钟链路。" : "未购买时无法开启；正式版会在这里弹出订阅页。")
                 }
 
-                Section {
+                Section("起床时间") {
                     HStack {
                         Text("基础起床时间")
                         Spacer()
                         Text(settingsViewModel.baseWakeUpTimeText)
-                            .foregroundStyle(.secondary)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
                     }
 
                     DatePicker(
-                        "设置起床时间",
+                        "设置时间",
                         selection: $settingsViewModel.selectedWakeUpTime,
                         displayedComponents: .hourAndMinute
                     )
@@ -85,31 +83,38 @@ struct ContentView: View {
                     }
                 }
 
-                Section {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("明日天气")
-                            .font(.headline)
+                Section("明日预估") {
+                    ForecastInsightRow(
+                        title: "明早天气",
+                        value: settingsViewModel.tomorrowWeatherText,
+                        footnote: settingsViewModel.weatherRefreshMessage ?? "来自 WeatherKit，不使用模拟天气。"
+                    )
 
-                        Text(settingsViewModel.tomorrowWeatherText)
-                            .foregroundStyle(.secondary)
+                    ForecastInsightRow(
+                        title: "闹钟建议",
+                        value: settingsViewModel.suggestedAlarmTimeText,
+                        footnote: settingsViewModel.tomorrowStatusText
+                    )
+
+                    Button {
+                        Task {
+                            await refreshWeatherFromDevice(showToast: true)
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "location.viewfinder")
+                            Text(settingsViewModel.isRefreshingWeather ? "正在获取真实天气" : "授权定位并刷新天气")
+                            Spacer()
+                            if settingsViewModel.isRefreshingWeather {
+                                ProgressView()
+                            }
+                        }
+                        .frame(minHeight: 40)
                     }
-                    .padding(.vertical, 4)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("建议闹钟时间")
-                            .font(.headline)
-
-                        Text(settingsViewModel.suggestedAlarmTimeText)
-                            .foregroundStyle(.secondary)
-
-                        Text(settingsViewModel.tomorrowStatusText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.vertical, 4)
+                    .disabled(settingsViewModel.isRefreshingWeather)
                 }
 
-                Section {
+                Section("提前规则") {
                     Stepper(
                         "下雨提前 \(settingsViewModel.rainAdvanceMinutes) 分钟",
                         value: $settingsViewModel.rainAdvanceMinutes,
@@ -130,11 +135,13 @@ struct ContentView: View {
                         settingsViewModel.saveWeatherAdjustmentSettings()
                     }
                 } footer: {
-                    Text("实际是否提前仍由 WeatherKit 的真实明日降水概率决定。")
+                    Text("是否提前仍由 WeatherKit 的真实降水概率决定；这里是你的个人缓冲规则。")
                 }
 
-                Section {
-                    Picker("通勤方式", selection: $settingsViewModel.selectedCommuteMode) {
+                Section("通勤路线") {
+                    CommuteMapPreview(route: settingsViewModel.settings?.commuteRoute)
+
+                    Picker("交通方式", selection: $settingsViewModel.selectedCommuteMode) {
                         ForEach(CommuteMode.allCases) { mode in
                             Text(mode.displayName).tag(mode)
                         }
@@ -145,10 +152,10 @@ struct ContentView: View {
                             .textInputAutocapitalization(.never)
                     }
 
-                    TextField("出发地，例如：北京市朝阳区望京SOHO", text: $settingsViewModel.commuteStartAddress)
+                    TextField("出发地，例如：望京 SOHO", text: $settingsViewModel.commuteStartAddress)
                         .textInputAutocapitalization(.never)
 
-                    TextField("目的地，例如：北京市海淀区中关村", text: $settingsViewModel.commuteEndAddress)
+                    TextField("目的地，例如：中关村", text: $settingsViewModel.commuteEndAddress)
                         .textInputAutocapitalization(.never)
 
                     Button {
@@ -157,13 +164,14 @@ struct ContentView: View {
                         }
                     } label: {
                         HStack {
-                            Text("同步高德通勤路线")
-
+                            Image(systemName: "map")
+                            Text(settingsViewModel.settings?.commuteRoute == nil ? "保存路线" : "更新路线")
+                            Spacer()
                             if settingsViewModel.isSyncingCommuteRoute {
-                                Spacer()
                                 ProgressView()
                             }
                         }
+                        .frame(minHeight: 42)
                     }
                     .disabled(settingsViewModel.isSyncingCommuteRoute)
 
@@ -182,7 +190,7 @@ struct ContentView: View {
                     }
                     .padding(.vertical, 4)
                 } footer: {
-                    Text("路线同步会调用高德地理编码，以及驾车、公交、骑行或步行路径规划 API；雨雪会按出行方式和路线距离增加额外预留时间。API Key 未配置或网络失败时不会保存假路线。")
+                    Text("保存时会真实调用高德地理编码和路线规划 API；失败时不会保存假路线。")
                 }
 
                 Section {
@@ -196,7 +204,7 @@ struct ContentView: View {
 
                                 Spacer()
 
-                                Text("AI 98 元起")
+                                Text("20 元起抵扣")
                                     .font(.caption.weight(.bold))
                                     .foregroundStyle(.orange)
                                     .padding(.horizontal, 8)
@@ -204,33 +212,24 @@ struct ContentView: View {
                                     .background(Color.orange.opacity(0.12), in: Capsule())
                             }
 
-                            Text("AI 催眠 98 元众筹；天气外卖提醒、提前睡觉闹钟 20 元众筹。正式上线定价时可抵扣。")
+                            Text("AI 催眠、外卖提醒、提前睡觉闹钟正在路上。支持后会记入对应服务，正式上线定价时可抵扣。")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                         .padding(.vertical, 4)
                     }
-                } footer: {
-                    Text("众筹权益仅用于对应服务上线后的价格抵扣，不可转让或跨服务使用。")
                 }
             }
+            .listStyle(.insetGrouped)
             .navigationTitle("智能闹钟")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("退出") {
-                        Task {
-                            await authSession.signOut()
-                        }
-                    }
-                }
-
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button("订阅") {
+                        Button("订阅与买断") {
                             isPaywallPresented = true
                         }
 
-                        Button("邀请好友") {
+                        Button("分享与券") {
                             isInvitePresented = true
                         }
 
@@ -238,7 +237,7 @@ struct ContentView: View {
                             isCrowdfundingPresented = true
                         }
                     } label: {
-                        Text("更多")
+                        Image(systemName: "ellipsis.circle")
                     }
                 }
             }
@@ -256,6 +255,7 @@ struct ContentView: View {
             .task {
                 await subscriptionStore.loadProductsAndEntitlements()
                 await restoreWarningNotifier.scheduleIfNeeded()
+                await requestInitialWeatherIfNeeded()
             }
             .onAppear {
                 settingsViewModel.reload()
@@ -266,7 +266,7 @@ struct ContentView: View {
                     hasPendingFriendCoupon = false
                 }
             } message: {
-                Text("该券仅可用于天气永久买断（298元）或高德增强（5元/月），不可用于月/年订阅哦~")
+                Text("该券仅可用于天气永久买断或高德增强服务，不可用于月/年订阅。")
             }
             .alert("先解锁安心模式", isPresented: $isPurchaseReminderPresented) {
                 Button("去购买") {
@@ -275,13 +275,46 @@ struct ContentView: View {
 
                 Button("先等等", role: .cancel) {}
             } message: {
-                Text("智能调整需要购买后才能开启。它会在你睡着时替你看明天的雨雪、通勤和起床时间，让早晨少一点狼狈，多一点从容。")
+                Text("智能调整需要购买后开启。TestFlight 版已临时解锁，正式版会在这里引导订阅。")
             }
         }
         .toast(message: $toastCenter.message)
     }
 
+    private func requestInitialWeatherIfNeeded() async {
+        guard !hasRequestedInitialWeather else {
+            return
+        }
+
+        hasRequestedInitialWeather = true
+        await refreshWeatherFromDevice(showToast: false)
+    }
+
+    private func refreshWeatherFromDevice(showToast: Bool) async {
+        do {
+            let location = try await locationProvider.requestCurrentLocation()
+            let didRefresh = await settingsViewModel.refreshWeatherWithCurrentLocation(location)
+            if showToast {
+                toastCenter.showToast(didRefresh ? "已刷新真实天气" : "天气获取失败")
+            }
+        } catch WeatherAlarmLocationProviderError.authorizationDenied {
+            if showToast {
+                toastCenter.showToast("请在系统设置中允许定位，才能获取真实天气")
+            }
+        } catch {
+            if showToast {
+                toastCenter.showToast("定位失败，暂时无法获取真实天气")
+            }
+        }
+    }
+
     private func handleSmartAdjustmentToggle(_ isEnabled: Bool) {
+        Task {
+            await updateSmartAdjustment(isEnabled)
+        }
+    }
+
+    private func updateSmartAdjustment(_ isEnabled: Bool) async {
         guard isEnabled else {
             do {
                 try settingsViewModel.setSmartAdjustmentEnabled(false)
@@ -292,7 +325,7 @@ struct ContentView: View {
         }
 
         guard subscriptionStore.hasPremiumAccess else {
-            toastCenter.showToast("购买后才能开启安心模式")
+            toastCenter.showToast("购买后才能开启智能天气调整")
             isPurchaseReminderPresented = true
             return
         }
@@ -303,9 +336,11 @@ struct ContentView: View {
         }
 
         do {
+            try await AlarmManager().requestAuthorization()
             try settingsViewModel.setSmartAdjustmentEnabled(true)
+            toastCenter.showToast("智能天气调整已开启")
         } catch {
-            toastCenter.showToast("设置保存失败")
+            toastCenter.showToast("闹钟权限未开启，无法自动调整")
         }
     }
 
@@ -320,7 +355,7 @@ struct ContentView: View {
         }
 
         guard subscriptionStore.hasPremiumAccess || subscriptionStore.hasGaodeEnhance else {
-            toastCenter.showToast("购买后才能开启安心模式")
+            toastCenter.showToast("购买高德增强后才能开启地图通勤调整")
             isPurchaseReminderPresented = true
             return
         }
@@ -337,6 +372,7 @@ struct ContentView: View {
 
         do {
             try settingsViewModel.setCommuteAdjustmentEnabled(true)
+            toastCenter.showToast("地图通勤调整已开启")
         } catch {
             toastCenter.showToast("设置保存失败")
         }
@@ -347,7 +383,60 @@ struct ContentView: View {
     if #available(iOS 26.0, *) {
         ContentView(subscriptionStore: StoreKitSubscriptionStore())
             .environmentObject(ToastMessageCenter())
-            .environmentObject(AuthSessionViewModel())
+    }
+}
+
+private struct PremiumToggleRow: View {
+    let title: String
+    let subtitle: String
+    let isUnlocked: Bool
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.headline)
+
+                    Text(isUnlocked ? "已解锁" : "未解锁")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(isUnlocked ? .green : .orange)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background((isUnlocked ? Color.green : Color.orange).opacity(0.12), in: Capsule())
+                }
+
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .toggleStyle(.switch)
+        .padding(.vertical, 6)
+    }
+}
+
+private struct ForecastInsightRow: View {
+    let title: String
+    let value: String
+    let footnote: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+
+            Text(value)
+                .font(.headline)
+                .foregroundStyle(.primary)
+
+            Text(footnote)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 5)
     }
 }
 
@@ -356,32 +445,33 @@ private struct WeatherMoodHeaderView: View {
     let suggestedTimeText: String
     let statusText: String
     let weatherText: String
+    let isRefreshing: Bool
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
             LinearGradient(
                 colors: [
-                    Color(red: 1.0, green: 0.97, blue: 0.88),
-                    Color(red: 0.88, green: 0.96, blue: 0.96),
-                    Color(red: 0.92, green: 0.96, blue: 1.0)
+                    Color(red: 0.98, green: 0.96, blue: 0.90),
+                    Color(red: 0.84, green: 0.94, blue: 0.96),
+                    Color(red: 0.90, green: 0.93, blue: 1.00)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
 
             RainMoodGraphic()
-                .padding(.top, 16)
+                .padding(.top, 18)
                 .padding(.trailing, 14)
 
-            VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("明天早晨")
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("SmartWake")
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(Color(red: 0.54, green: 0.35, blue: 0.09))
+                        .foregroundStyle(Color(red: 0.45, green: 0.34, blue: 0.14))
 
-                    Text("让雨天慢下来")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundStyle(Color(red: 0.07, green: 0.13, blue: 0.22))
+                    Text("明早不用慌")
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(Color(red: 0.05, green: 0.09, blue: 0.16))
 
                     Text(statusText)
                         .font(.subheadline)
@@ -396,40 +486,31 @@ private struct WeatherMoodHeaderView: View {
                 }
 
                 HStack(spacing: 10) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("安心模式")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.secondary)
+                    Image(systemName: isRefreshing ? "cloud.sun" : "sparkles")
+                        .font(.headline)
+                        .foregroundStyle(Color(red: 0.08, green: 0.38, blue: 0.35))
+                        .frame(width: 36, height: 36)
+                        .background(.white.opacity(0.62), in: Circle())
 
-                        Text("雨和路都算进去了，明早不用临时赶时间。")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color(red: 0.07, green: 0.13, blue: 0.22))
-                            .lineLimit(2)
-                    }
+                    Text(isRefreshing ? "正在读取真实天气..." : "雨、雪、路线都替你提前想一步。")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color(red: 0.07, green: 0.13, blue: 0.22))
+                        .lineLimit(2)
 
                     Spacer()
-
-                    Text("稳")
-                        .font(.caption.weight(.black))
-                        .foregroundStyle(Color(red: 0.07, green: 0.37, blue: 0.35))
-                        .frame(width: 38, height: 38)
-                        .overlay {
-                            Circle()
-                                .stroke(Color(red: 0.07, green: 0.46, blue: 0.43).opacity(0.35), lineWidth: 2)
-                        }
                 }
                 .padding(10)
-                .background(.white.opacity(0.66), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(.white.opacity(0.66), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.black.opacity(0.06))
         }
-        .padding(.vertical, 4)
+        .shadow(color: Color(red: 0.22, green: 0.36, blue: 0.48).opacity(0.16), radius: 18, y: 10)
     }
 }
 
@@ -451,7 +532,7 @@ private struct MoodMetricView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
         .padding(.horizontal, 10)
-        .background(.white.opacity(0.68), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(.white.opacity(0.70), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -492,5 +573,110 @@ private struct RainDropView: View {
     var body: some View {
         Capsule()
             .frame(width: 3, height: height)
+    }
+}
+
+private struct CommuteMapPreview: View {
+    let route: CommuteRoute?
+
+    var body: some View {
+        Group {
+            if let route {
+                RouteMapView(route: route)
+                    .frame(height: 190)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(alignment: .bottomLeading) {
+                        Text("\(route.effectiveMode.displayName) · 高德路线坐标")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(.black.opacity(0.45), in: Capsule())
+                            .padding(12)
+                    }
+            } else {
+                VStack(alignment: .leading, spacing: 10) {
+                    Image(systemName: "map")
+                        .font(.title2)
+                        .foregroundStyle(.blue)
+
+                    Text("保存路线后显示地图")
+                        .font(.headline)
+
+                    Text("输入出发地和目的地后，App 会调用高德 API 获取真实坐标和路线耗时。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
+                .padding(16)
+                .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+private struct RouteMapView: UIViewRepresentable {
+    let route: CommuteRoute
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> MKMapView {
+        let mapView = MKMapView()
+        mapView.delegate = context.coordinator
+        mapView.isPitchEnabled = false
+        mapView.isRotateEnabled = false
+        mapView.pointOfInterestFilter = .includingAll
+        return mapView
+    }
+
+    func updateUIView(_ mapView: MKMapView, context: Context) {
+        mapView.removeAnnotations(mapView.annotations)
+        mapView.removeOverlays(mapView.overlays)
+
+        let start = MKPointAnnotation()
+        start.title = route.startName ?? "出发地"
+        start.coordinate = route.startCoordinate
+
+        let end = MKPointAnnotation()
+        end.title = route.endName ?? "目的地"
+        end.coordinate = route.endCoordinate
+
+        mapView.addAnnotations([start, end])
+
+        let coordinates = [route.startCoordinate, route.endCoordinate]
+        let polyline = coordinates.withUnsafeBufferPointer { buffer in
+            MKPolyline(coordinates: buffer.baseAddress!, count: buffer.count)
+        }
+        mapView.addOverlay(polyline)
+
+        var mapRect = polyline.boundingMapRect
+        if mapRect.isNull || mapRect.size.width == 0 || mapRect.size.height == 0 {
+            let point = MKMapPoint(route.startCoordinate)
+            mapRect = MKMapRect(x: point.x, y: point.y, width: 10_000, height: 10_000)
+        }
+
+        mapView.setVisibleMapRect(
+            mapRect,
+            edgePadding: UIEdgeInsets(top: 42, left: 42, bottom: 42, right: 42),
+            animated: false
+        )
+    }
+
+    final class Coordinator: NSObject, MKMapViewDelegate {
+        func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
+            if let polyline = overlay as? MKPolyline {
+                let renderer = MKPolylineRenderer(polyline: polyline)
+                renderer.strokeColor = UIColor.systemBlue
+                renderer.lineWidth = 5
+                renderer.lineCap = .round
+                renderer.lineJoin = .round
+                return renderer
+            }
+
+            return MKOverlayRenderer(overlay: overlay)
+        }
     }
 }
