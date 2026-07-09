@@ -45,6 +45,7 @@ targets:
         NSAlarmKitUsageDescription: Used to adjust your wake-up alarm based on tomorrow morning weather and commute conditions.
         NSLocationWhenInUseUsageDescription: Used to request your current location for real WeatherKit forecasts.
         AMapWebServiceAPIKey: ae9b87a9bed26996b16ff1d016c57324
+        AMapIOSSDKAPIKey: 48af497021f8e1e26502a6fdea93a1f0
         AuthAPIBaseURL: https://domenwang-weather-alarm-auth.onrender.com
         BGTaskSchedulerPermittedIdentifiers:
           - com.domenx.SmartWake.daily-weather-refresh
