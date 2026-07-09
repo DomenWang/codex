@@ -5,6 +5,7 @@ import WeatherKit
 enum WeatherServiceError: LocalizedError {
     case missingMorningWindow
     case noHourlyForecastForMorningWindow
+    case openMeteoMissingHourlyData
 
     var errorDescription: String? {
         switch self {
@@ -12,6 +13,24 @@ enum WeatherServiceError: LocalizedError {
             return "Could not calculate the next 6:00-9:00 morning weather window."
         case .noHourlyForecastForMorningWindow:
             return "WeatherKit did not return hourly forecast data for the 6:00-9:00 morning window."
+        case .openMeteoMissingHourlyData:
+            return "Open-Meteo did not return usable hourly forecast data for the 6:00-9:00 morning window."
+        }
+    }
+}
+
+private struct OpenMeteoForecastResponse: Decodable {
+    let hourly: Hourly
+
+    struct Hourly: Decodable {
+        let time: [String]
+        let precipitationProbability: [Double]?
+        let weatherCode: [Int]?
+
+        enum CodingKeys: String, CodingKey {
+            case time
+            case precipitationProbability = "precipitation_probability"
+            case weatherCode = "weather_code"
         }
     }
 }
@@ -43,35 +62,122 @@ final class WeatherService {
         let startDate = now
         let endDate = calendar.date(byAdding: .hour, value: 24, to: startDate) ?? startDate.addingTimeInterval(24 * 60 * 60)
 
-        let weather = try await appleWeatherService.weather(
-            for: location,
-            including: .hourly(startDate: startDate, endDate: endDate)
-        )
-
         let morningWindow = try nextMorningWindowWithin24Hours(after: now)
 
-        let morningForecast = weather.forecast.filter { hourWeather in
-            hourWeather.date >= morningWindow.start && hourWeather.date < morningWindow.end
+        do {
+            let weather = try await appleWeatherService.weather(
+                for: location,
+                including: .hourly(startDate: startDate, endDate: endDate)
+            )
+
+            let morningForecast = weather.forecast.filter { hourWeather in
+                hourWeather.date >= morningWindow.start && hourWeather.date < morningWindow.end
+            }
+
+            guard !morningForecast.isEmpty else {
+                throw WeatherServiceError.noHourlyForecastForMorningWindow
+            }
+
+            let wettestHour = morningForecast.max {
+                $0.precipitationChance < $1.precipitationChance
+            }
+
+            guard let wettestHour else {
+                throw WeatherServiceError.noHourlyForecastForMorningWindow
+            }
+
+            return MorningWeatherSummary(
+                weatherCondition: wettestHour.condition.description,
+                precipitationChancePercent: wettestHour.precipitationChance * 100,
+                windowStart: morningWindow.start,
+                windowEnd: morningWindow.end
+            )
+        } catch {
+            return try await fetchOpenMeteoMorningSummary(
+                for: location,
+                morningWindow: morningWindow
+            )
+        }
+    }
+
+    /// WeatherKit 失败时的真实天气降级方案。
+    ///
+    /// 这不是 Mock：Open-Meteo 会使用用户真实坐标请求小时级预报。若请求失败或没有 6:00-9:00 数据，同样抛错。
+    private func fetchOpenMeteoMorningSummary(
+        for location: CLLocation,
+        morningWindow: (start: Date, end: Date)
+    ) async throws -> MorningWeatherSummary {
+        var components = URLComponents(string: "https://api.open-meteo.com/v1/forecast")
+        components?.queryItems = [
+            URLQueryItem(name: "latitude", value: String(format: "%.6f", location.coordinate.latitude)),
+            URLQueryItem(name: "longitude", value: String(format: "%.6f", location.coordinate.longitude)),
+            URLQueryItem(name: "hourly", value: "precipitation_probability,weather_code"),
+            URLQueryItem(name: "forecast_days", value: "2"),
+            URLQueryItem(name: "timezone", value: "auto")
+        ]
+
+        guard let url = components?.url else {
+            throw URLError(.badURL)
         }
 
-        guard !morningForecast.isEmpty else {
-            throw WeatherServiceError.noHourlyForecastForMorningWindow
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw URLError(.badServerResponse)
         }
 
-        let wettestHour = morningForecast.max {
-            $0.precipitationChance < $1.precipitationChance
+        let forecast = try JSONDecoder().decode(OpenMeteoForecastResponse.self, from: data)
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
+
+        let candidates = forecast.hourly.time.enumerated().compactMap { index, timeText -> (date: Date, chance: Double, code: Int?)? in
+            guard let date = formatter.date(from: timeText),
+                  date >= morningWindow.start,
+                  date < morningWindow.end else {
+                return nil
+            }
+
+            let chance = forecast.hourly.precipitationProbability?[safe: index] ?? 0
+            let code = forecast.hourly.weatherCode?[safe: index]
+            return (date, chance, code)
         }
 
-        guard let wettestHour else {
-            throw WeatherServiceError.noHourlyForecastForMorningWindow
+        guard let wettestHour = candidates.max(by: { $0.chance < $1.chance }) else {
+            throw WeatherServiceError.openMeteoMissingHourlyData
         }
 
         return MorningWeatherSummary(
-            weatherCondition: wettestHour.condition.description,
-            precipitationChancePercent: wettestHour.precipitationChance * 100,
+            weatherCondition: Self.openMeteoConditionDescription(for: wettestHour.code),
+            precipitationChancePercent: wettestHour.chance,
             windowStart: morningWindow.start,
             windowEnd: morningWindow.end
         )
+    }
+
+    private static func openMeteoConditionDescription(for code: Int?) -> String {
+        guard let code else {
+            return "天气预报"
+        }
+
+        switch code {
+        case 0:
+            return "晴"
+        case 1...3:
+            return "多云"
+        case 45, 48:
+            return "雾"
+        case 51...67, 80...82:
+            return "雨"
+        case 71...77, 85...86:
+            return "雪"
+        case 95...99:
+            return "雷雨"
+        default:
+            return "天气预报"
+        }
     }
 
     /// 找到未来 24 小时内的下一段 6:00-9:00。
@@ -105,6 +211,12 @@ final class WeatherService {
         }
 
         throw WeatherServiceError.missingMorningWindow
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }
 
