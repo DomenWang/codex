@@ -414,7 +414,7 @@ struct ContentView: View {
     }
 }
 
-private enum RouteLocationRole: String, Identifiable {
+enum RouteLocationRole: String, Identifiable {
     case start
     case end
 
@@ -516,58 +516,25 @@ private struct RouteLocationSheet: View {
     @Environment(\.dismiss) private var dismiss
     let role: RouteLocationRole
     @ObservedObject var settingsViewModel: WeatherAlarmSettingsViewModel
-    @State private var draftAddress = ""
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    LabeledContent {
-                        TextField(role.placeholder, text: $draftAddress)
-                            .multilineTextAlignment(.trailing)
-                            .textInputAutocapitalization(.never)
-                    } label: {
-                        Label(role.fieldTitle, systemImage: role == .start ? "location.circle.fill" : "mappin.circle.fill")
-                    }
-                } footer: {
-                    Text("先输入完整地址保存；下一步接入高德 iOS SDK 后，这里会替换成真正的地图点选和 POI 搜索。")
-                }
-
-                Section {
-                    RoutePickerMapPlaceholder(role: role)
+        RouteWebMapPicker(
+            startAddress: settingsViewModel.commuteStartAddress,
+            endAddress: settingsViewModel.commuteEndAddress,
+            activeRole: role,
+            onCancel: {
+                dismiss()
+            },
+            onSave: { startAddress, endAddress in
+                settingsViewModel.commuteStartAddress = startAddress
+                settingsViewModel.commuteEndAddress = endAddress
+                Task {
+                    await settingsViewModel.syncCommuteRouteWithAMap()
+                    dismiss()
                 }
             }
-            .navigationTitle(role.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear {
-                switch role {
-                case .start:
-                    draftAddress = settingsViewModel.commuteStartAddress
-                case .end:
-                    draftAddress = settingsViewModel.commuteEndAddress
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
-                        dismiss()
-                    }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
-                        switch role {
-                        case .start:
-                            settingsViewModel.commuteStartAddress = draftAddress
-                        case .end:
-                            settingsViewModel.commuteEndAddress = draftAddress
-                        }
-                        dismiss()
-                    }
-                    .disabled(draftAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-        }
+        )
+        .ignoresSafeArea()
     }
 }
 
@@ -594,7 +561,7 @@ private struct RoutePickerMapPlaceholder: View {
                 Text("地图点选即将接入高德 iOS SDK")
                     .font(.headline)
 
-                Text("当前版本先保存地址并调用高德 Web 服务解析真实坐标。")
+                Text("输入地址后点“搜索并显示地图”，这里会显示高德返回的真实地图。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -603,6 +570,63 @@ private struct RoutePickerMapPlaceholder: View {
         }
         .frame(maxWidth: .infinity, minHeight: 180)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+private struct AMapStaticMapPreview: View {
+    let location: AMapResolvedLocation
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let url = staticMapURL {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(maxWidth: .infinity, minHeight: 180)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 220)
+                            .clipped()
+                    case .failure:
+                        RoutePickerMapPlaceholder(role: .start)
+                    @unknown default:
+                        EmptyView()
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+
+            Text(location.name)
+                .font(.headline)
+
+            Text(String(format: "%.6f, %.6f", location.coordinate.latitude, location.coordinate.longitude))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var staticMapURL: URL? {
+        guard let key = Bundle.main.object(forInfoDictionaryKey: "AMapWebServiceAPIKey") as? String,
+              !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        let longitude = String(format: "%.6f", location.coordinate.longitude)
+        let latitude = String(format: "%.6f", location.coordinate.latitude)
+        let coordinateText = "\(longitude),\(latitude)"
+        var components = URLComponents(string: "https://restapi.amap.com/v3/staticmap")
+        components?.queryItems = [
+            URLQueryItem(name: "location", value: coordinateText),
+            URLQueryItem(name: "zoom", value: "16"),
+            URLQueryItem(name: "size", value: "750*360"),
+            URLQueryItem(name: "markers", value: "mid,,A:\(coordinateText)"),
+            URLQueryItem(name: "key", value: key)
+        ]
+        return components?.url
     }
 }
 

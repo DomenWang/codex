@@ -61,6 +61,11 @@ struct AMapGeocode: Codable {
     }
 }
 
+struct AMapResolvedLocation {
+    let name: String
+    let coordinate: CLLocationCoordinate2D
+}
+
 // MARK: - 路况领域模型
 
 enum TrafficLevel {
@@ -254,6 +259,11 @@ final class TransitService {
             baseDistanceMeters: metrics.distance,
             coordinateSystem: "gcj02"
         )
+    }
+
+    func resolveAddress(_ address: String) async throws -> AMapResolvedLocation {
+        let result = try await geocode(address: address)
+        return AMapResolvedLocation(name: result.name, coordinate: result.coordinate)
     }
 
     private func geocode(address: String) async throws -> (name: String, coordinate: CLLocationCoordinate2D) {

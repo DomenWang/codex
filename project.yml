@@ -46,6 +46,8 @@ targets:
         NSLocationWhenInUseUsageDescription: Used to request your current location for real WeatherKit forecasts.
         AMapWebServiceAPIKey: ae9b87a9bed26996b16ff1d016c57324
         AMapIOSSDKAPIKey: 48af497021f8e1e26502a6fdea93a1f0
+        AMapJSAPIKey: 19f1f3bb82da42e31939daa17688f4be
+        AMapJSSecurityCode: 977fcb2da98d276b5216b01348e1af3f
         AuthAPIBaseURL: https://domenwang-weather-alarm-auth.onrender.com
         BGTaskSchedulerPermittedIdentifiers:
           - com.domenx.SmartWake.daily-weather-refresh

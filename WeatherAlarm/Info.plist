@@ -6,6 +6,10 @@
 	<string>ae9b87a9bed26996b16ff1d016c57324</string>
 	<key>AMapIOSSDKAPIKey</key>
 	<string>48af497021f8e1e26502a6fdea93a1f0</string>
+	<key>AMapJSAPIKey</key>
+	<string>19f1f3bb82da42e31939daa17688f4be</string>
+	<key>AMapJSSecurityCode</key>
+	<string>977fcb2da98d276b5216b01348e1af3f</string>
 	<key>AuthAPIBaseURL</key>
 	<string>https://domenwang-weather-alarm-auth.onrender.com</string>
 	<key>NSAlarmKitUsageDescription</key>

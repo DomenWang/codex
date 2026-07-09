@@ -190,13 +190,17 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
             weatherRefreshMessage = "已用 WeatherKit 获取真实明早天气"
             return true
         } catch {
-            weatherRefreshMessage = "天气获取失败：请检查定位权限、WeatherKit 能力或网络"
+            weatherRefreshMessage = "天气获取失败：\(error.localizedDescription)"
             return false
         }
     }
 
     func markWeatherRefreshFailed(_ message: String) {
         weatherRefreshMessage = message
+    }
+
+    func resolveAMapAddress(_ address: String) async throws -> AMapResolvedLocation {
+        try await transitService.resolveAddress(address)
     }
 
     @discardableResult
