@@ -83,6 +83,16 @@ struct ContentView: View {
                     .onChange(of: settingsViewModel.selectedWakeUpTime) {
                         saveWakeUpTimeAndRescheduleAlarm()
                     }
+
+                    Button {
+                        Task {
+                            await testWakeAlarm()
+                        }
+                    } label: {
+                        Label("立即试响闹钟", systemImage: "alarm")
+                            .frame(maxWidth: .infinity, minHeight: 42)
+                    }
+                    .buttonStyle(.bordered)
                 } header: {
                     Text("起床时间")
                 }
@@ -369,6 +379,15 @@ struct ContentView: View {
             } catch {
                 toastCenter.showToast("闹钟更新失败，请检查闹钟/通知权限")
             }
+        }
+    }
+
+    private func testWakeAlarm() async {
+        do {
+            try await LocalWakeNotificationScheduler().scheduleTestNotification()
+            toastCenter.showToast("5秒后试响通知")
+        } catch {
+            toastCenter.showToast("试响失败，请开启通知权限")
         }
     }
 

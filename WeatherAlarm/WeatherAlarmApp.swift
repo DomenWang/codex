@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 @main
 @available(iOS 26.0, *)
@@ -8,6 +9,7 @@ struct WeatherAlarmApp: App {
     @StateObject private var authSession = AuthSessionViewModel()
     @StateObject private var referralStateStore = ReferralStateStore()
     @StateObject private var subscriptionStore = StoreKitSubscriptionStore()
+    @StateObject private var wakeNotificationDelegate = WakeNotificationDelegate()
     private let restoreWarningNotifier = PurchaseRestoreWarningNotifier()
 
     var body: some Scene {
@@ -16,6 +18,8 @@ struct WeatherAlarmApp: App {
                 .environmentObject(dependencies.toastCenter)
                 .environmentObject(authSession)
                 .task {
+                    WakeNotificationDelegate.registerCategories()
+                    UNUserNotificationCenter.current().delegate = wakeNotificationDelegate
                     await authSession.restoreSession()
                     await subscriptionStore.loadProductsAndEntitlements()
                     await restoreWarningNotifier.scheduleIfNeeded()
