@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var isInvitePresented = false
     @State private var isCrowdfundingPresented = false
     @State private var isPurchaseReminderPresented = false
+    @State private var isRouteEditorPresented = false
     @State private var hasRequestedInitialWeather = false
     @AppStorage("ww_pending_friend_coupon") private var hasPendingFriendCoupon = false
 
@@ -147,39 +148,31 @@ struct ContentView: View {
                 Section {
                     CommuteMapPreview(route: settingsViewModel.settings?.commuteRoute)
 
-                    Picker("交通方式", selection: $settingsViewModel.selectedCommuteMode) {
-                        ForEach(CommuteMode.allCases) { mode in
-                            Text(mode.displayName).tag(mode)
+                    VStack(spacing: 10) {
+                        RouteEndpointButton(
+                            title: "出发地",
+                            value: routeDisplayText(
+                                currentValue: settingsViewModel.commuteStartAddress,
+                                fallback: settingsViewModel.settings?.commuteRoute?.startName,
+                                placeholder: "点此选择出发地"
+                            ),
+                            systemImage: "location.circle.fill"
+                        ) {
+                            isRouteEditorPresented = true
+                        }
+
+                        RouteEndpointButton(
+                            title: "目的地",
+                            value: routeDisplayText(
+                                currentValue: settingsViewModel.commuteEndAddress,
+                                fallback: settingsViewModel.settings?.commuteRoute?.endName,
+                                placeholder: "点此选择目的地"
+                            ),
+                            systemImage: "mappin.circle.fill"
+                        ) {
+                            isRouteEditorPresented = true
                         }
                     }
-
-                    if settingsViewModel.selectedCommuteMode == .transit {
-                        TextField("公交城市，例如：北京", text: $settingsViewModel.commuteCity)
-                            .textInputAutocapitalization(.never)
-                    }
-
-                    TextField("出发地，例如：望京 SOHO", text: $settingsViewModel.commuteStartAddress)
-                        .textInputAutocapitalization(.never)
-
-                    TextField("目的地，例如：中关村", text: $settingsViewModel.commuteEndAddress)
-                        .textInputAutocapitalization(.never)
-
-                    Button {
-                        Task {
-                            await settingsViewModel.syncCommuteRouteWithAMap()
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: "map")
-                            Text(settingsViewModel.settings?.commuteRoute == nil ? "保存路线" : "更新路线")
-                            Spacer()
-                            if settingsViewModel.isSyncingCommuteRoute {
-                                ProgressView()
-                            }
-                        }
-                        .frame(minHeight: 42)
-                    }
-                    .disabled(settingsViewModel.isSyncingCommuteRoute)
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text("当前路线")
@@ -195,10 +188,18 @@ struct ContentView: View {
                         }
                     }
                     .padding(.vertical, 4)
+
+                    Button {
+                        isRouteEditorPresented = true
+                    } label: {
+                        Label(settingsViewModel.settings?.commuteRoute == nil ? "设置通勤路线" : "编辑通勤路线", systemImage: "slider.horizontal.3")
+                            .frame(maxWidth: .infinity, minHeight: 42)
+                    }
+                    .buttonStyle(.borderedProminent)
                 } header: {
                     Text("通勤路线")
                 } footer: {
-                    Text("保存时会真实调用高德地理编码和路线规划 API；失败时不会保存假路线。")
+                    Text("点出发地或目的地进入路线设置；保存时会真实调用高德地理编码和路线规划 API。公交路线会从地址中自动识别所在城市。")
                 }
 
                 Section {
@@ -259,6 +260,9 @@ struct ContentView: View {
                 NavigationStack {
                     CrowdfundingView(store: subscriptionStore)
                 }
+            }
+            .sheet(isPresented: $isRouteEditorPresented) {
+                RouteEditorSheet(settingsViewModel: settingsViewModel)
             }
             .task {
                 await subscriptionStore.loadProductsAndEntitlements()
@@ -385,6 +389,20 @@ struct ContentView: View {
             toastCenter.showToast("设置保存失败")
         }
     }
+
+    private func routeDisplayText(currentValue: String, fallback: String?, placeholder: String) -> String {
+        let trimmed = currentValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return trimmed
+        }
+
+        if let fallback,
+           !fallback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return fallback
+        }
+
+        return placeholder
+    }
 }
 
 #Preview {
@@ -445,6 +463,124 @@ private struct ForecastInsightRow: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 5)
+    }
+}
+
+@available(iOS 26.0, *)
+private struct RouteEditorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var settingsViewModel: WeatherAlarmSettingsViewModel
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("交通方式", selection: $settingsViewModel.selectedCommuteMode) {
+                        ForEach(CommuteMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                } footer: {
+                    Text("公交路线不需要单独填写城市，App 会从出发地或目的地地址里自动识别；请尽量输入完整地址，例如“北京市朝阳区望京 SOHO”。")
+                }
+
+                Section {
+                    LabeledContent {
+                        TextField("例如：北京市朝阳区望京 SOHO", text: $settingsViewModel.commuteStartAddress)
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.never)
+                    } label: {
+                        Label("出发地", systemImage: "location.circle.fill")
+                    }
+
+                    LabeledContent {
+                        TextField("例如：北京市海淀区中关村", text: $settingsViewModel.commuteEndAddress)
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.never)
+                    } label: {
+                        Label("目的地", systemImage: "mappin.circle.fill")
+                    }
+                } header: {
+                    Text("地点")
+                } footer: {
+                    Text("这里会调用高德 API 解析真实坐标，不会保存无法解析的假地址。")
+                }
+
+                if let message = settingsViewModel.commuteSyncMessage {
+                    Section {
+                        Text(message)
+                            .foregroundStyle(message.contains("失败") || message.contains("需要") ? .red : .secondary)
+                    }
+                }
+            }
+            .navigationTitle("设置通勤路线")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button {
+                        Task {
+                            let didSave = await settingsViewModel.syncCommuteRouteWithAMap()
+                            if didSave {
+                                dismiss()
+                            }
+                        }
+                    } label: {
+                        if settingsViewModel.isSyncingCommuteRoute {
+                            ProgressView()
+                        } else {
+                            Text("保存")
+                        }
+                    }
+                    .disabled(settingsViewModel.isSyncingCommuteRoute)
+                }
+            }
+        }
+    }
+}
+
+private struct RouteEndpointButton: View {
+    let title: String
+    let value: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.title3)
+                    .foregroundStyle(.blue)
+                    .frame(width: 28)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+
+                    Text(value)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(value.contains("点此") ? .secondary : .primary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(12)
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 

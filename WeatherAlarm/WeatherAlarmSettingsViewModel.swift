@@ -195,35 +195,63 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
         }
     }
 
-    func syncCommuteRouteWithAMap() async {
+    @discardableResult
+    func syncCommuteRouteWithAMap() async -> Bool {
         guard !commuteStartAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !commuteEndAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             commuteSyncMessage = "请填写出发地和目的地"
-            return
+            return false
         }
 
         isSyncingCommuteRoute = true
         commuteSyncMessage = nil
+        let transitCity = inferredTransitCity()
 
         do {
             let route = try await transitService.syncCommuteRoute(
                 startAddress: commuteStartAddress,
                 endAddress: commuteEndAddress,
                 mode: selectedCommuteMode,
-                city: commuteCity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : commuteCity
+                city: selectedCommuteMode == .transit ? transitCity : transitCity
             )
             settings = try settingsStore.saveCommuteRoute(route)
             commuteStartAddress = route.startName ?? commuteStartAddress
             commuteEndAddress = route.endName ?? commuteEndAddress
-            commuteCity = route.city ?? commuteCity
+            commuteCity = route.city ?? transitCity ?? commuteCity
             commuteSyncMessage = "路线已保存，高德预估时间已同步"
+            isSyncingCommuteRoute = false
+            return true
         } catch TransitServiceError.missingTransitCity {
-            commuteSyncMessage = "公交路线需要填写城市"
+            commuteSyncMessage = "公交路线需要出发地或目的地包含城市名，例如：北京市朝阳区望京"
         } catch {
             commuteSyncMessage = "高德路线同步失败，请检查 API Key、地址或网络"
         }
 
         isSyncingCommuteRoute = false
+        return false
+    }
+
+    private func inferredTransitCity() -> String? {
+        let explicitCity = commuteCity.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !explicitCity.isEmpty {
+            return explicitCity
+        }
+
+        for address in [commuteStartAddress, commuteEndAddress] {
+            let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let cityRange = trimmed.range(of: "市") {
+                let city = String(trimmed[...cityRange.lowerBound])
+                if city.count >= 2 {
+                    return city
+                }
+            }
+
+            for municipality in ["北京", "上海", "天津", "重庆"] where trimmed.contains(municipality) {
+                return "\(municipality)市"
+            }
+        }
+
+        return nil
     }
 
     private func buildVisibleStatusIfPossible() {
