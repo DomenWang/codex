@@ -64,7 +64,7 @@ struct ContentView: View {
                     Text(subscriptionStore.hasPremiumAccess ? "TestFlight 测试版已解锁全部付费能力，方便你先验证真实天气、路线和闹钟链路。" : "未购买时无法开启；正式版会在这里弹出订阅页。")
                 }
 
-                Section("起床时间") {
+                Section {
                     HStack {
                         Text("基础起床时间")
                         Spacer()
@@ -81,9 +81,11 @@ struct ContentView: View {
                     .onChange(of: settingsViewModel.selectedWakeUpTime) {
                         settingsViewModel.saveSelectedWakeUpTime()
                     }
+                } header: {
+                    Text("起床时间")
                 }
 
-                Section("明日预估") {
+                Section {
                     ForecastInsightRow(
                         title: "明早天气",
                         value: settingsViewModel.tomorrowWeatherText,
@@ -112,9 +114,11 @@ struct ContentView: View {
                         .frame(minHeight: 40)
                     }
                     .disabled(settingsViewModel.isRefreshingWeather)
+                } header: {
+                    Text("明日预估")
                 }
 
-                Section("提前规则") {
+                Section {
                     Stepper(
                         "下雨提前 \(settingsViewModel.rainAdvanceMinutes) 分钟",
                         value: $settingsViewModel.rainAdvanceMinutes,
@@ -134,11 +138,13 @@ struct ContentView: View {
                     .onChange(of: settingsViewModel.heavyRainAdvanceMinutes) {
                         settingsViewModel.saveWeatherAdjustmentSettings()
                     }
+                } header: {
+                    Text("提前规则")
                 } footer: {
                     Text("是否提前仍由 WeatherKit 的真实降水概率决定；这里是你的个人缓冲规则。")
                 }
 
-                Section("通勤路线") {
+                Section {
                     CommuteMapPreview(route: settingsViewModel.settings?.commuteRoute)
 
                     Picker("交通方式", selection: $settingsViewModel.selectedCommuteMode) {
@@ -189,6 +195,8 @@ struct ContentView: View {
                         }
                     }
                     .padding(.vertical, 4)
+                } header: {
+                    Text("通勤路线")
                 } footer: {
                     Text("保存时会真实调用高德地理编码和路线规划 API；失败时不会保存假路线。")
                 }
