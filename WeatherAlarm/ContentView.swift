@@ -81,7 +81,7 @@ struct ContentView: View {
                         displayedComponents: .hourAndMinute
                     )
                     .onChange(of: settingsViewModel.selectedWakeUpTime) {
-                        settingsViewModel.saveSelectedWakeUpTime()
+                        saveWakeUpTimeAndRescheduleAlarm()
                     }
                 } header: {
                     Text("起床时间")
@@ -335,6 +335,43 @@ struct ContentView: View {
         }
     }
 
+    private func saveWakeUpTimeAndRescheduleAlarm() {
+        settingsViewModel.saveSelectedWakeUpTime()
+        Task {
+            await rescheduleWakeAlarmAfterTimeChange()
+        }
+    }
+
+    private func rescheduleWakeAlarmAfterTimeChange() async {
+        guard settingsViewModel.settings != nil else {
+            return
+        }
+
+        do {
+            let alarmManager = AlarmManager()
+            try await alarmManager.requestAuthorization()
+
+            if settingsViewModel.isSmartAdjustmentEnabled,
+               let status = settingsViewModel.latestStatus {
+                try await alarmManager.updateAlarmBasedOnWeather(
+                    weatherCondition: status.weatherCondition,
+                    precipitationChance: status.precipitationChancePercent
+                )
+            } else {
+                try await alarmManager.ensureBasicAlarmRegistered()
+            }
+
+            toastCenter.showToast("系统闹钟时间已更新")
+        } catch {
+            do {
+                try await LocalWakeNotificationScheduler().rescheduleFallbackWakeNotification()
+                toastCenter.showToast("AlarmKit 暂不可用，已改用通知提醒")
+            } catch {
+                toastCenter.showToast("闹钟更新失败，请检查闹钟/通知权限")
+            }
+        }
+    }
+
     private func updateSmartAdjustment(_ isEnabled: Bool) async {
         guard isEnabled else {
             do {
@@ -359,9 +396,15 @@ struct ContentView: View {
         do {
             try await AlarmManager().requestAuthorization()
             try settingsViewModel.setSmartAdjustmentEnabled(true)
+            try await AlarmManager().ensureBasicAlarmRegistered()
             toastCenter.showToast("智能天气调整已开启")
         } catch {
-            toastCenter.showToast("闹钟权限未开启，无法自动调整")
+            do {
+                try await LocalWakeNotificationScheduler().rescheduleFallbackWakeNotification()
+                toastCenter.showToast("AlarmKit 未开启，已先用通知提醒兜底")
+            } catch {
+                toastCenter.showToast("闹钟权限未开启，无法自动调整")
+            }
         }
     }
 
