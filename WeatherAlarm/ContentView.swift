@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var isCrowdfundingPresented = false
     @State private var isPurchaseReminderPresented = false
     @State private var isRouteEditorPresented = false
+    @State private var activeRouteLocationRole: RouteLocationRole?
     @State private var hasRequestedInitialWeather = false
     @AppStorage("ww_pending_friend_coupon") private var hasPendingFriendCoupon = false
 
@@ -158,7 +159,7 @@ struct ContentView: View {
                             ),
                             systemImage: "location.circle.fill"
                         ) {
-                            isRouteEditorPresented = true
+                            activeRouteLocationRole = .start
                         }
 
                         RouteEndpointButton(
@@ -170,7 +171,7 @@ struct ContentView: View {
                             ),
                             systemImage: "mappin.circle.fill"
                         ) {
-                            isRouteEditorPresented = true
+                            activeRouteLocationRole = .end
                         }
                     }
 
@@ -264,6 +265,9 @@ struct ContentView: View {
             .sheet(isPresented: $isRouteEditorPresented) {
                 RouteEditorSheet(settingsViewModel: settingsViewModel)
             }
+            .sheet(item: $activeRouteLocationRole) { role in
+                RouteLocationSheet(role: role, settingsViewModel: settingsViewModel)
+            }
             .task {
                 await subscriptionStore.loadProductsAndEntitlements()
                 await restoreWarningNotifier.scheduleIfNeeded()
@@ -310,10 +314,12 @@ struct ContentView: View {
                 toastCenter.showToast(didRefresh ? "已刷新真实天气" : "天气获取失败")
             }
         } catch WeatherAlarmLocationProviderError.authorizationDenied {
+            settingsViewModel.markWeatherRefreshFailed("定位权限未开启，无法查询真实天气")
             if showToast {
                 toastCenter.showToast("请在系统设置中允许定位，才能获取真实天气")
             }
         } catch {
+            settingsViewModel.markWeatherRefreshFailed("定位失败，暂时无法查询真实天气")
             if showToast {
                 toastCenter.showToast("定位失败，暂时无法获取真实天气")
             }
@@ -405,6 +411,42 @@ struct ContentView: View {
     }
 }
 
+private enum RouteLocationRole: String, Identifiable {
+    case start
+    case end
+
+    var id: String {
+        rawValue
+    }
+
+    var title: String {
+        switch self {
+        case .start:
+            return "选择出发地"
+        case .end:
+            return "选择目的地"
+        }
+    }
+
+    var fieldTitle: String {
+        switch self {
+        case .start:
+            return "出发地"
+        case .end:
+            return "目的地"
+        }
+    }
+
+    var placeholder: String {
+        switch self {
+        case .start:
+            return "输入出发地，例如：北京市朝阳区望京 SOHO"
+        case .end:
+            return "输入目的地，例如：北京市海淀区中关村"
+        }
+    }
+}
+
 #Preview {
     if #available(iOS 26.0, *) {
         ContentView(subscriptionStore: StoreKitSubscriptionStore())
@@ -463,6 +505,101 @@ private struct ForecastInsightRow: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 5)
+    }
+}
+
+@available(iOS 26.0, *)
+private struct RouteLocationSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let role: RouteLocationRole
+    @ObservedObject var settingsViewModel: WeatherAlarmSettingsViewModel
+    @State private var draftAddress = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    LabeledContent {
+                        TextField(role.placeholder, text: $draftAddress)
+                            .multilineTextAlignment(.trailing)
+                            .textInputAutocapitalization(.never)
+                    } label: {
+                        Label(role.fieldTitle, systemImage: role == .start ? "location.circle.fill" : "mappin.circle.fill")
+                    }
+                } footer: {
+                    Text("先输入完整地址保存；下一步接入高德 iOS SDK 后，这里会替换成真正的地图点选和 POI 搜索。")
+                }
+
+                Section {
+                    RoutePickerMapPlaceholder(role: role)
+                }
+            }
+            .navigationTitle(role.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                switch role {
+                case .start:
+                    draftAddress = settingsViewModel.commuteStartAddress
+                case .end:
+                    draftAddress = settingsViewModel.commuteEndAddress
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") {
+                        switch role {
+                        case .start:
+                            settingsViewModel.commuteStartAddress = draftAddress
+                        case .end:
+                            settingsViewModel.commuteEndAddress = draftAddress
+                        }
+                        dismiss()
+                    }
+                    .disabled(draftAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+private struct RoutePickerMapPlaceholder: View {
+    let role: RouteLocationRole
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color.blue.opacity(0.18),
+                    Color.cyan.opacity(0.12),
+                    Color.green.opacity(0.12)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            VStack(spacing: 12) {
+                Image(systemName: role == .start ? "location.viewfinder" : "mappin.and.ellipse")
+                    .font(.system(size: 38, weight: .semibold))
+                    .foregroundStyle(.blue)
+
+                Text("地图点选即将接入高德 iOS SDK")
+                    .font(.headline)
+
+                Text("当前版本先保存地址并调用高德 Web 服务解析真实坐标。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(20)
+        }
+        .frame(maxWidth: .infinity, minHeight: 180)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 

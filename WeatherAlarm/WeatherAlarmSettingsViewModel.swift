@@ -195,6 +195,10 @@ final class WeatherAlarmSettingsViewModel: ObservableObject {
         }
     }
 
+    func markWeatherRefreshFailed(_ message: String) {
+        weatherRefreshMessage = message
+    }
+
     @discardableResult
     func syncCommuteRouteWithAMap() async -> Bool {
         guard !commuteStartAddress.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
