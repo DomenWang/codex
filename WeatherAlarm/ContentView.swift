@@ -265,7 +265,7 @@ struct ContentView: View {
             .sheet(isPresented: $isRouteEditorPresented) {
                 RouteEditorSheet(settingsViewModel: settingsViewModel)
             }
-            .sheet(item: $activeRouteLocationRole) { role in
+            .fullScreenCover(item: $activeRouteLocationRole) { role in
                 RouteLocationSheet(role: role, settingsViewModel: settingsViewModel)
             }
             .task {
@@ -275,6 +275,9 @@ struct ContentView: View {
             }
             .onAppear {
                 settingsViewModel.reload()
+                Task {
+                    await requestInitialWeatherIfNeeded()
+                }
             }
             .alert("好友送你50元代金券", isPresented: $hasPendingFriendCoupon) {
                 Button("立即领取") {
@@ -689,35 +692,33 @@ private struct RouteEndpointButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: systemImage)
-                    .font(.title3)
-                    .foregroundStyle(.blue)
-                    .frame(width: 28)
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.title3)
+                .foregroundStyle(.blue)
+                .frame(width: 28)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.secondary)
-
-                    Text(value)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(value.contains("点此") ? .secondary : .primary)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
+
+                Text(value)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(value.contains("点此") ? .secondary : .primary)
+                    .lineLimit(1)
             }
-            .contentShape(Rectangle())
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.tertiary)
         }
-        .buttonStyle(.plain)
         .padding(12)
         .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .contentShape(Rectangle())
+        .onTapGesture(perform: action)
     }
 }
 
