@@ -43,8 +43,7 @@ builds = asc_get(
   "/v1/builds",
   {
     "filter[app]" => app_id,
-    "filter[version]" => version_string,
-    "filter[buildNumber]" => build_number,
+    "filter[version]" => build_number,
     "include" => "preReleaseVersion",
     "limit" => "10"
   },
