@@ -1,0 +1,41 @@
+# frozen_string_literal: true
+
+require "base64"
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Publish the validated unpaid Build 34 and resubmit version 1.0"
+  lane :release_build34 do
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("APPLE_API_KEY_ID"),
+      issuer_id: ENV.fetch("APPLE_API_ISSUER_ID"),
+      key_content: Base64.decode64(ENV.fetch("APPLE_API_KEY_BASE64")),
+      is_key_content_base64: false,
+      in_house: false
+    )
+
+    deliver(
+      api_key: api_key,
+      app_identifier: "com.domenx.SmartWake",
+      app_version: "1.0",
+      build_number: "34",
+      platform: "ios",
+      metadata_path: "fastlane/metadata",
+      screenshots_path: "fastlane/screenshots",
+      skip_binary_upload: true,
+      skip_metadata: false,
+      skip_screenshots: false,
+      overwrite_screenshots: true,
+      sync_screenshots: true,
+      force: true,
+      submit_for_review: true,
+      automatic_release: false,
+      run_precheck_before_submit: false,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false
+      }
+    )
+  end
+end

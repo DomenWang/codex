@@ -11,6 +11,7 @@ on:
         options:
           - upload
           - inspect
+          - release
   push:
     tags:
       - "v*"
@@ -25,6 +26,49 @@ env:
   EXPORT_PATH: build/export
 
 jobs:
+  release-app-store:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'release' }}
+    name: Release Build 34 to App Review
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate App Store Connect secrets
+        shell: bash
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          for secret_name in APPLE_API_KEY_BASE64 APPLE_API_KEY_ID APPLE_API_ISSUER_ID; do
+            if [[ -z "${!secret_name:-}" ]]; then
+              echo "::error::Missing GitHub secret: ${secret_name}"
+              exit 1
+            fi
+          done
+
+      - name: Install fastlane when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v fastlane >/dev/null 2>&1; then
+            brew install fastlane
+          fi
+          fastlane --version
+
+      - name: Update metadata, screenshots, and submit Build 34
+        shell: bash
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          fastlane ios release_build34
+
   inspect-app-store-connect:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'inspect' }}
     name: Inspect App Store Connect
