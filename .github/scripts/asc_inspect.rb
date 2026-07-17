@@ -61,6 +61,33 @@ versions = asc_get(
   token
 )
 
+version_localization = versions.fetch("included", []).find do |item|
+  item["type"] == "appStoreVersionLocalizations" && item.dig("attributes", "locale") == "zh-Hans"
+end
+
+screenshot_sets =
+  if version_localization
+    asc_get(
+      "/v1/appStoreVersionLocalizations/#{version_localization.fetch("id")}/appScreenshotSets",
+      {
+        "include" => "appScreenshots",
+        "limit" => "50"
+      },
+      token
+    )
+  else
+    { "data" => [], "included" => [] }
+  end
+
+app_infos = asc_get(
+  "/v1/apps/#{app_id}/appInfos",
+  {
+    "include" => "appInfoLocalizations",
+    "limit" => "10"
+  },
+  token
+)
+
 summary = {
   requested: { app_id: app_id, version: version_string, build: build_number },
   builds: builds.fetch("data", []).map do |item|
@@ -86,8 +113,32 @@ summary = {
       type: item["type"],
       id: item["id"],
       locale: item.dig("attributes", "locale"),
-      support_url: item.dig("attributes", "supportUrl")
+      support_url: item.dig("attributes", "supportUrl"),
+      description_has_privacy_link: item.dig("attributes", "description")&.include?("privacy.html"),
+      description_has_terms_link: item.dig("attributes", "description")&.include?("terms.html")
     }.compact
+  end,
+  screenshot_sets: screenshot_sets.fetch("data", []).map do |item|
+    {
+      id: item["id"],
+      display_type: item.dig("attributes", "screenshotDisplayType"),
+      screenshot_count: item.dig("relationships", "appScreenshots", "data")&.count || 0
+    }
+  end,
+  screenshot_assets: screenshot_sets.fetch("included", []).map do |item|
+    {
+      id: item["id"],
+      file_name: item.dig("attributes", "fileName"),
+      state: item.dig("attributes", "assetDeliveryState", "state")
+    }
+  end,
+  app_info_localizations: app_infos.fetch("included", []).filter_map do |item|
+    next unless item["type"] == "appInfoLocalizations"
+
+    {
+      locale: item.dig("attributes", "locale"),
+      privacy_policy_url: item.dig("attributes", "privacyPolicyUrl")
+    }
   end
 }
 
