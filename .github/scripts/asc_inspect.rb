@@ -88,6 +88,15 @@ app_infos = asc_get(
   token
 )
 
+review_submissions = asc_get(
+  "/v1/apps/#{app_id}/reviewSubmissions",
+  {
+    "include" => "items",
+    "limit" => "50"
+  },
+  token
+)
+
 summary = {
   requested: { app_id: app_id, version: version_string, build: build_number },
   builds: builds.fetch("data", []).map do |item|
@@ -138,6 +147,24 @@ summary = {
     {
       locale: item.dig("attributes", "locale"),
       privacy_policy_url: item.dig("attributes", "privacyPolicyUrl")
+    }
+  end,
+  review_submissions: review_submissions.fetch("data", []).map do |item|
+    {
+      id: item["id"],
+      platform: item.dig("attributes", "platform"),
+      state: item.dig("attributes", "state"),
+      submitted_date: item.dig("attributes", "submittedDate"),
+      item_ids: item.dig("relationships", "items", "data")&.map { |value| value["id"] } || []
+    }
+  end,
+  review_submission_items: review_submissions.fetch("included", []).filter_map do |item|
+    next unless item["type"] == "reviewSubmissionItems"
+
+    {
+      id: item["id"],
+      state: item.dig("attributes", "state"),
+      app_store_version_id: item.dig("relationships", "appStoreVersion", "data", "id")
     }
   end
 }
