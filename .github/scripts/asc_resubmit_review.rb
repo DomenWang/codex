@@ -57,6 +57,41 @@ end
 abort("No unresolved iOS review submission found") unless submission
 
 submission_id = submission.fetch("id")
+items = asc_request(
+  :get,
+  "/v1/reviewSubmissions/#{submission_id}/items",
+  token,
+  params: { "limit" => "50" }
+)
+rejected_items = items.fetch("data", []).select do |item|
+  item.dig("attributes", "state") == "REJECTED"
+end
+ready_items = items.fetch("data", []).select do |item|
+  item.dig("attributes", "state") == "READY_FOR_REVIEW"
+end
+if rejected_items.empty? && ready_items.empty?
+  abort("Unresolved review submission has no rejected or ready item")
+end
+
+rejected_items.each do |item|
+  item_id = item.fetch("id")
+  resolved_item = asc_request(
+    :patch,
+    "/v1/reviewSubmissionItems/#{item_id}",
+    token,
+    body: {
+      data: {
+        type: "reviewSubmissionItems",
+        id: item_id,
+        attributes: {
+          resolved: true
+        }
+      }
+    }
+  )
+  puts "Resolved review item #{item_id}; current state: #{resolved_item.dig("data", "attributes", "state")}"
+end
+
 asc_request(
   :patch,
   "/v1/reviewSubmissions/#{submission_id}",
