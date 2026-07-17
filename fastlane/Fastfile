@@ -27,7 +27,6 @@ platform :ios do
       skip_metadata: false,
       skip_screenshots: false,
       overwrite_screenshots: true,
-      sync_screenshots: true,
       force: true,
       submit_for_review: true,
       automatic_release: false,
