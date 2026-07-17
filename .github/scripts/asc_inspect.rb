@@ -51,9 +51,8 @@ builds = asc_get(
 )
 
 versions = asc_get(
-  "/v1/appStoreVersions",
+  "/v1/apps/#{app_id}/appStoreVersions",
   {
-    "filter[app]" => app_id,
     "filter[versionString]" => version_string,
     "filter[platform]" => "IOS",
     "include" => "build,appStoreVersionLocalizations,appStoreReviewDetail",
