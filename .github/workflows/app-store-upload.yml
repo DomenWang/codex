@@ -48,7 +48,15 @@ jobs:
         run: |
           set -euo pipefail
           gem install jwt --no-document
-          ruby .github/scripts/asc_resubmit_review.rb
+          for attempt in $(seq 1 12); do
+            echo "Review resubmission attempt ${attempt}/12"
+            if ruby .github/scripts/asc_resubmit_review.rb; then
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::App Store version did not become ready within the retry window."
+          exit 1
 
   repair-app-store-screenshot:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'repair' }}
