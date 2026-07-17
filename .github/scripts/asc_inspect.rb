@@ -82,7 +82,7 @@ screenshot_sets =
 app_infos = asc_get(
   "/v1/apps/#{app_id}/appInfos",
   {
-    "include" => "appInfoLocalizations",
+    "include" => "appInfoLocalizations,ageRatingDeclaration,primaryCategory,secondaryCategory",
     "limit" => "10"
   },
   token
@@ -91,11 +91,46 @@ app_infos = asc_get(
 review_submissions = asc_get(
   "/v1/apps/#{app_id}/reviewSubmissions",
   {
-    "include" => "items",
+    "include" => "items,appStoreVersionForReview",
     "limit" => "50"
   },
   token
 )
+
+unresolved_submission = review_submissions.fetch("data", []).find do |item|
+  item.dig("attributes", "platform") == "IOS" &&
+    item.dig("attributes", "state") == "UNRESOLVED_ISSUES"
+end
+
+unresolved_items =
+  if unresolved_submission
+    asc_get(
+      "/v1/reviewSubmissions/#{unresolved_submission.fetch("id")}/items",
+      {
+        "include" => "appStoreVersion",
+        "limit" => "50"
+      },
+      token
+    )
+  else
+    { "data" => [], "included" => [] }
+  end
+
+def present_text?(value)
+  value.is_a?(String) && !value.strip.empty?
+end
+
+version_review_detail = versions.fetch("included", []).find do |item|
+  item["type"] == "appStoreReviewDetails"
+end
+
+version_localizations = versions.fetch("included", []).select do |item|
+  item["type"] == "appStoreVersionLocalizations"
+end
+
+age_rating = app_infos.fetch("included", []).find do |item|
+  item["type"] == "ageRatingDeclarations"
+end
 
 summary = {
   requested: { app_id: app_id, version: version_string, build: build_number },
@@ -105,7 +140,10 @@ summary = {
       version: item.dig("attributes", "version"),
       processing_state: item.dig("attributes", "processingState"),
       uploaded_date: item.dig("attributes", "uploadedDate"),
-      expired: item.dig("attributes", "expired")
+      expired: item.dig("attributes", "expired"),
+      encryption_answered: !item.dig("attributes", "usesNonExemptEncryption").nil?,
+      uses_non_exempt_encryption: item.dig("attributes", "usesNonExemptEncryption"),
+      has_icon: !item.dig("attributes", "iconAssetToken").nil?
     }
   end,
   app_store_versions: versions.fetch("data", []).map do |item|
@@ -114,9 +152,41 @@ summary = {
       state: item.dig("attributes", "appStoreState"),
       version_string: item.dig("attributes", "versionString"),
       platform: item.dig("attributes", "platform"),
-      build_id: item.dig("relationships", "build", "data", "id")
+      build_id: item.dig("relationships", "build", "data", "id"),
+      has_copyright: present_text?(item.dig("attributes", "copyright")),
+      release_type: item.dig("attributes", "versionReleaseType"),
+      downloadable: item.dig("attributes", "downloadable")
     }
   end,
+  review_detail: {
+    exists: !version_review_detail.nil?,
+    contact_first_name: present_text?(version_review_detail&.dig("attributes", "contactFirstName")),
+    contact_last_name: present_text?(version_review_detail&.dig("attributes", "contactLastName")),
+    contact_phone: present_text?(version_review_detail&.dig("attributes", "contactPhone")),
+    contact_email: present_text?(version_review_detail&.dig("attributes", "contactEmail")),
+    has_notes: present_text?(version_review_detail&.dig("attributes", "notes")),
+    demo_account_required: version_review_detail&.dig("attributes", "demoAccountRequired"),
+    demo_credentials_present:
+      present_text?(version_review_detail&.dig("attributes", "demoAccountName")) &&
+      present_text?(version_review_detail&.dig("attributes", "demoAccountPassword"))
+  },
+  version_localization_completeness: version_localizations.map do |item|
+    {
+      locale: item.dig("attributes", "locale"),
+      description: present_text?(item.dig("attributes", "description")),
+      keywords: present_text?(item.dig("attributes", "keywords")),
+      support_url: present_text?(item.dig("attributes", "supportUrl")),
+      whats_new: present_text?(item.dig("attributes", "whatsNew"))
+    }
+  end,
+  age_rating: {
+    exists: !age_rating.nil?,
+    completed_field_count: age_rating&.fetch("attributes", {})&.values&.count { |value| !value.nil? } || 0
+  },
+  categories: {
+    primary_present: app_infos.fetch("included", []).any? { |item| item["type"] == "appCategories" },
+    app_info_count: app_infos.fetch("data", []).count
+  },
   included: versions.fetch("included", []).map do |item|
     {
       type: item["type"],
@@ -155,6 +225,8 @@ summary = {
       platform: item.dig("attributes", "platform"),
       state: item.dig("attributes", "state"),
       submitted_date: item.dig("attributes", "submittedDate"),
+      app_store_version_for_review_id:
+        item.dig("relationships", "appStoreVersionForReview", "data", "id"),
       item_ids: item.dig("relationships", "items", "data")&.map { |value| value["id"] } || []
     }
   end,
@@ -165,6 +237,22 @@ summary = {
       id: item["id"],
       state: item.dig("attributes", "state"),
       app_store_version_id: item.dig("relationships", "appStoreVersion", "data", "id")
+    }
+  end,
+  unresolved_items: unresolved_items.fetch("data", []).map do |item|
+    {
+      id: item["id"],
+      state: item.dig("attributes", "state"),
+      app_store_version_id: item.dig("relationships", "appStoreVersion", "data", "id")
+    }
+  end,
+  unresolved_included_versions: unresolved_items.fetch("included", []).filter_map do |item|
+    next unless item["type"] == "appStoreVersions"
+
+    {
+      id: item["id"],
+      state: item.dig("attributes", "appStoreState"),
+      version_string: item.dig("attributes", "versionString")
     }
   end
 }
