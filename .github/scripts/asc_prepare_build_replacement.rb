@@ -40,7 +40,7 @@ def asc_request(method, path, token, params: {}, body: nil)
     warn response.body
     exit 1
   end
-  response.body.empty? ? {} : JSON.parse(response.body)
+  response.body.nil? || response.body.empty? ? {} : JSON.parse(response.body)
 end
 
 app_id = ENV.fetch("ASC_APP_ID")
