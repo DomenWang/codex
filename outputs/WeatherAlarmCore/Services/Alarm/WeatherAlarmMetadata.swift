@@ -14,4 +14,7 @@ nonisolated struct WeatherAlarmMetadata: AlarmMetadata {
     let commuteDelayMinutes: Int
     let weatherCondition: String
     let precipitationChancePercent: Double
+    let alarmTitle: String
+    let snoozeMinutes: Int
+    let dismissChallenge: OrdinaryAlarmDismissChallenge
 }

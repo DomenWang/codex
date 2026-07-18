@@ -1,10 +1,13 @@
 import Foundation
 
 enum AppGroupUserDefaults {
-    // TODO: 在 Apple Developer 和 Xcode Signing & Capabilities 中启用同名 App Group。
     static let identifier = "group.com.domenx.SmartWake"
 
     static var shared: UserDefaults {
-        UserDefaults(suiteName: identifier) ?? .standard
+        guard let defaults = UserDefaults(suiteName: identifier) else {
+            assertionFailure("SmartWake App Group 不可用，请检查主 App 与 Widget 的签名权利。")
+            return .standard
+        }
+        return defaults
     }
 }

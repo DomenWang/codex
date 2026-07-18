@@ -2,20 +2,28 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>AMapWebServiceAPIKey</key>
-	<string>ae9b87a9bed26996b16ff1d016c57324</string>
-	<key>AMapIOSSDKAPIKey</key>
-	<string>48af497021f8e1e26502a6fdea93a1f0</string>
-	<key>AMapJSAPIKey</key>
-	<string>19f1f3bb82da42e31939daa17688f4be</string>
-	<key>AMapJSSecurityCode</key>
-	<string>977fcb2da98d276b5216b01348e1af3f</string>
 	<key>AuthAPIBaseURL</key>
 	<string>https://domenwang-weather-alarm-auth.onrender.com</string>
-	<key>NSAlarmKitUsageDescription</key>
-	<string>Used to adjust your wake-up alarm based on tomorrow morning weather and commute conditions.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Used to request your current location for real WeatherKit forecasts.</string>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.domenx.SmartWake.daily-weather-refresh</string>
+	</array>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>SmartWake</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -27,6 +35,32 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleVersion</key>
+	<string>35</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>Used to adjust your wake-up alarm based on tomorrow morning weather and commute conditions.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Used to refresh weather and commute conditions before alarms so SmartWake can adjust wake-up time reliably.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Used to refresh weather and commute conditions before alarms so SmartWake can adjust wake-up time reliably.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>用于获取当前位置，以便查询对应时段的真实天气并计算智能提前。</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Used to verify shake or walking challenges before dismissing selected alarms.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>fetch</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

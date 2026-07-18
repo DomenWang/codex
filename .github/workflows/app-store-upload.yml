@@ -15,6 +15,7 @@ on:
           - repair
           - finalize
           - resubmit
+          - replace
   push:
     tags:
       - "v*"
@@ -83,7 +84,7 @@ jobs:
 
   finalize-app-store-release:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'finalize' }}
-    name: Bind Build 34 and Submit Review
+    name: Bind Build 35 and Submit Review
     runs-on: macos-26
 
     steps:
@@ -99,7 +100,7 @@ jobs:
           fi
           fastlane --version
 
-      - name: Bind Build 34 and submit
+      - name: Bind Build 35 and submit
         shell: bash
         env:
           APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
@@ -107,11 +108,11 @@ jobs:
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
           set -euo pipefail
-          fastlane ios finalize_build34
+          fastlane ios finalize_build35
 
   release-app-store:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'release' }}
-    name: Release Build 34 to App Review
+    name: Release Build 35 to App Review
     runs-on: macos-26
 
     steps:
@@ -142,7 +143,7 @@ jobs:
           fi
           fastlane --version
 
-      - name: Update metadata, screenshots, and submit Build 34
+      - name: Update metadata, screenshots, and submit Build 35
         shell: bash
         env:
           APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
@@ -150,7 +151,7 @@ jobs:
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
           set -euo pipefail
-          fastlane ios release_build34
+          fastlane ios release_build35
 
   inspect-app-store-connect:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'inspect' }}
@@ -176,7 +177,7 @@ jobs:
             fi
           done
 
-      - name: Inspect SmartWake Build 34
+      - name: Inspect SmartWake Build 35
         shell: bash
         env:
           APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
@@ -184,11 +185,53 @@ jobs:
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
           ASC_APP_ID: "6788850214"
           ASC_VERSION: "1.0"
-          ASC_BUILD: "34"
+          ASC_BUILD: "35"
         run: |
           set -euo pipefail
           gem install jwt --no-document
           ruby .github/scripts/asc_inspect.rb
+
+  replace-app-store-build:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'replace' }}
+    name: Replace Review Build with Build 35
+    runs-on: macos-26
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Wait for Build 35, cancel the old submission, and attach it
+        shell: bash
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          ASC_APP_ID: "6788850214"
+          ASC_VERSION: "1.0"
+          ASC_BUILD: "35"
+        run: |
+          set -euo pipefail
+          gem install jwt --no-document
+          ruby .github/scripts/asc_prepare_build_replacement.rb
+
+      - name: Install fastlane when needed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v fastlane >/dev/null 2>&1; then
+            brew install fastlane
+          fi
+          fastlane --version
+
+      - name: Submit Build 35
+        shell: bash
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          fastlane ios finalize_build35
 
   archive-and-upload:
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.mode == 'upload' }}

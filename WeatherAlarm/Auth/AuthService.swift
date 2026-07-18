@@ -61,6 +61,33 @@ final class AuthService {
         )
     }
 
+    func syncEntitlements(
+        userID: UUID,
+        accessToken: String,
+        snapshot: PurchaseEntitlementSnapshot
+    ) async throws -> EntitlementSyncResponse {
+        try await send(
+            path: "/billing/entitlements/sync",
+            method: "POST",
+            body: EntitlementSyncRequest(
+                userID: userID,
+                payload: EntitlementSyncPayload(
+                    hasPurchasedForever: snapshot.hasPurchasedForever,
+                    isWeatherSubscribed: snapshot.isWeatherSubscribed,
+                    hasGaodeEnhance: snapshot.hasGaodeEnhance,
+                    weatherExpireDate: snapshot.weatherExpireDate,
+                    gaodeExpireDate: snapshot.gaodeExpireDate,
+                    productIDs: snapshot.productIDs,
+                    transactionIDs: snapshot.transactionIDs,
+                    originalTransactionIDs: snapshot.originalTransactionIDs,
+                    capturedAt: snapshot.capturedAt,
+                    clientSyncedAt: Date()
+                )
+            ),
+            authorization: accessToken
+        )
+    }
+
     private func makeRequest<T: Encodable>(
         path: String,
         method: String,
@@ -111,7 +138,10 @@ final class AuthService {
         }
 
         if ResponseBody.self == EmptyResponse.self {
-            return EmptyResponse() as! ResponseBody
+            guard let emptyResponse = EmptyResponse() as? ResponseBody else {
+                throw AuthServiceError.invalidResponse
+            }
+            return emptyResponse
         }
 
         do {

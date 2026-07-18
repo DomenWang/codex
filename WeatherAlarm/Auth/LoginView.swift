@@ -54,13 +54,29 @@ struct LoginView: View {
                 }
 
                 Section {
-                    Text("账号系统会通过你的后端 HTTPS API 登录，访问令牌保存在 iOS Keychain。请先部署 auth-backend 并配置 AuthAPIBaseURL。")
+                    Text("登录后可以同步订阅权益和闹钟设置，换手机也能继续使用。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background {
+                if #available(iOS 26.0, *) {
+                    SmartWakeAmbientBackdrop(style: .mist)
+                } else {
+                    Color(uiColor: .systemGroupedBackground)
+                }
+            }
             .navigationTitle("智能闹钟")
         }
+        .tint(
+            {
+                if #available(iOS 26.0, *) {
+                    return SmartWakeTheme.teal
+                }
+                return Color.accentColor
+            }()
+        )
     }
 }
 

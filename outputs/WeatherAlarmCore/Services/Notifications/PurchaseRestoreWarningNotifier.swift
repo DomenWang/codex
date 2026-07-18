@@ -4,6 +4,7 @@ import UserNotifications
 /// 当 StoreKit 临时查不到权益、但本地购买快照仍显示用户买过时，安排本地提醒。
 ///
 /// 这不是权限判断来源；它只是给用户一个补救窗口，提醒打开 App 刷新购买状态。
+@MainActor
 final class PurchaseRestoreWarningNotifier {
     private let snapshotStore: PurchaseEntitlementSnapshotStore
     private let notificationCenter: UNUserNotificationCenter
@@ -26,20 +27,21 @@ final class PurchaseRestoreWarningNotifier {
             return
         }
 
-        guard let warningDate = todayAt22IfStillUpcoming(now: now) else {
+        guard let warningDate = todayAt21IfStillUpcoming(now: now) else {
             return
         }
 
         do {
-            let granted = try await notificationCenter.requestAuthorization(options: [.alert, .sound])
+            let granted = try await notificationCenter.requestAuthorization(options: [.alert])
             guard granted else {
                 return
             }
 
             let content = UNMutableNotificationContent()
-            content.title = "天气闹钟需要你打开一下"
+            content.title = "SmartWake需要你打开一下"
             content.body = "智能闹钟权限可能需要刷新。今晚睡前打开 App 一次，明早会更稳。"
-            content.sound = .default
+            content.sound = nil
+            content.interruptionLevel = .passive
 
             let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: warningDate)
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
@@ -56,9 +58,9 @@ final class PurchaseRestoreWarningNotifier {
         }
     }
 
-    private func todayAt22IfStillUpcoming(now: Date) -> Date? {
+    private func todayAt21IfStillUpcoming(now: Date) -> Date? {
         guard let warningDate = calendar.date(
-            bySettingHour: 22,
+            bySettingHour: 21,
             minute: 0,
             second: 0,
             of: now

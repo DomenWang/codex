@@ -24,12 +24,30 @@ final class NoopToastPresenter: ToastPresenting {
 @MainActor
 final class ToastMessageCenter: ObservableObject, ToastPresenting {
     @Published var message: String?
+    private var dismissTask: Task<Void, Never>?
 
     func showToast(_ message: String) {
+        showToast(message, duration: .seconds(4))
+    }
+
+    func showToast(_ message: String, duration: Duration = .seconds(4)) {
+        dismissTask?.cancel()
+        self.message = nil
         self.message = message
+        dismissTask = Task { [weak self] in
+            try? await Task.sleep(for: duration)
+            guard !Task.isCancelled else {
+                return
+            }
+
+            await MainActor.run {
+                self?.message = nil
+            }
+        }
     }
 
     func clear() {
+        dismissTask?.cancel()
         message = nil
     }
 }

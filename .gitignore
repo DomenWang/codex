@@ -17,6 +17,7 @@ private_keys/
 *.mobileprovision
 *.log
 .claude/
+WeatherAlarm/graphify-out/
 
 .DS_Store
 Thumbs.db

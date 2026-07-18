@@ -49,9 +49,11 @@ Add:
 - Keep `com.domenx.SmartWake.daily-weather-refresh` identical in code, Info.plist, and `project.yml`.
 - StoreKit 2 product IDs must be created in App Store Connect before purchases can succeed:
   - `com.weatherwake.sub.weather_monthly` (¥19/month, no coupons)
-  - `com.weatherwake.sub.weather_yearly` (¥98/year, no coupons)
-  - `com.weatherwake.iap.forever_commute` (¥298 non-consumable, supports REF100_OFF / REF50_UNIVERSAL eligibility)
-  - `com.weatherwake.sub.gaode_enhance` (¥5/month, supports REF50_UNIVERSAL eligibility)
+  - `com.weatherwake.sub.weather_yearly` (¥198/year, no coupons)
+  - `com.weatherwake.iap.forever_commute` (¥298 limited-time non-consumable weather forever access, supports REF100_OFF / REF50_UNIVERSAL eligibility)
+  - `com.weatherwake.iap.forever_weather_full` (¥598 non-consumable weather forever access, supports REF100_OFF / REF50_UNIVERSAL eligibility)
+  - `com.weatherwake.sub.gaode_enhance` (¥19/month, supports REF50_UNIVERSAL eligibility)
+  - `com.weatherwake.sub.gaode_enhance_yearly` (¥198/year, supports REF50_UNIVERSAL eligibility)
 - Referral coupon client validation is handled by `CouponEligibilityValidator`, but the actual discounted price must still be enforced by App Store Connect offers or backend receipt validation. Never show cash, withdrawal, or transfer wording.
 - The Widget reads the latest real weather-alarm status from the App Group. It does not call WeatherKit, TransitService, or AlarmKit by itself.
 - The rain advance minutes are user-configurable in the main UI, but the decision still depends on real WeatherKit precipitation probability.

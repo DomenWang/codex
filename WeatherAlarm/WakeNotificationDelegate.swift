@@ -38,6 +38,14 @@ final class WakeNotificationDelegate: NSObject, ObservableObject, UNUserNotifica
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        if let urlText = response.notification.request.content.userInfo["url"] as? String,
+           urlText == "weatherwake://dismiss-challenge" {
+            await MainActor.run {
+                NotificationCenter.default.post(name: .weatherAlarmDismissChallengeURLReceived, object: nil)
+            }
+            return
+        }
+
         guard response.actionIdentifier == Self.snoozeActionIdentifier else {
             return
         }

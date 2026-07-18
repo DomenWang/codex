@@ -33,7 +33,7 @@ enum CouponEligibilityError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .unsupportedService:
-            return "该代金券仅可用于天气永久买断或高德增强服务哦~"
+            return "该代金券仅可用于天气永久买断或路径订阅哦~"
         case .stackingNotAllowed:
             return "代金券不可叠加使用，请选择一项服务抵扣~"
         case .couponAlreadyUsed:
@@ -58,12 +58,14 @@ enum CouponEligibilityValidator {
 
         switch coupon.type {
         case .ref100Off:
-            guard productID == WeatherAlarmProductID.foreverCommute else {
+            guard productID == WeatherAlarmProductID.foreverWeatherReferral100
+                    || productID == WeatherAlarmProductID.foreverWeatherReferral100Regular else {
                 throw CouponEligibilityError.unsupportedService
             }
         case .ref50Universal:
-            guard productID == WeatherAlarmProductID.foreverCommute
-                    || productID == WeatherAlarmProductID.gaodeEnhance else {
+            guard productID == WeatherAlarmProductID.foreverWeatherFriend50
+                    || productID == WeatherAlarmProductID.foreverWeatherFriend50Regular
+                    || productID == WeatherAlarmProductID.pathYearlyFriend50 else {
                 throw CouponEligibilityError.unsupportedService
             }
         }

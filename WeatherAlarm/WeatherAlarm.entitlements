@@ -2,13 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- TODO: Enable AlarmKit and WeatherKit in Xcode Signing & Capabilities.
-         Xcode will keep this entitlements file in sync with your Apple Developer account. -->
-    <key>com.apple.security.application-groups</key>
-    <array>
-        <string>group.com.domenx.SmartWake</string>
-    </array>
-    <key>com.apple.developer.weatherkit</key>
-    <true/>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.domenx.SmartWake</string>
+	</array>
 </dict>
 </plist>

@@ -18,14 +18,17 @@ final class AuthSessionViewModel: ObservableObject {
 
     private let authService: AuthService
     private let tokenStore: KeychainTokenStore
+    private let entitlementSnapshotStore: PurchaseEntitlementSnapshotStore
     private var tokens: AuthTokens?
 
     init(
         authService: AuthService = AuthService(),
-        tokenStore: KeychainTokenStore = KeychainTokenStore()
+        tokenStore: KeychainTokenStore = KeychainTokenStore(),
+        entitlementSnapshotStore: PurchaseEntitlementSnapshotStore = PurchaseEntitlementSnapshotStore()
     ) {
         self.authService = authService
         self.tokenStore = tokenStore
+        self.entitlementSnapshotStore = entitlementSnapshotStore
     }
 
     var isSignedIn: Bool {
@@ -53,11 +56,13 @@ final class AuthSessionViewModel: ObservableObject {
                 let user = try await authService.currentUser(accessToken: storedTokens.accessToken)
                 tokens = storedTokens
                 state = .signedIn(user)
+                await syncLocalEntitlementsIfPossible()
             } catch {
                 let refreshedSession = try await authService.refresh(refreshToken: storedTokens.refreshToken)
                 try tokenStore.save(refreshedSession.tokens)
                 tokens = refreshedSession.tokens
                 state = .signedIn(refreshedSession.user)
+                await syncLocalEntitlementsIfPossible()
             }
             message = nil
         } catch {
@@ -94,6 +99,7 @@ final class AuthSessionViewModel: ObservableObject {
             tokens = session.tokens
             password = ""
             state = .signedIn(session.user)
+            await syncLocalEntitlementsIfPossible()
         } catch {
             state = .signedOut
             message = error.localizedDescription
@@ -108,6 +114,29 @@ final class AuthSessionViewModel: ObservableObject {
 
         if let refreshToken = currentTokens?.refreshToken {
             try? await authService.logout(refreshToken: refreshToken)
+        }
+    }
+
+    func syncLocalEntitlementsIfPossible() async {
+        guard case .signedIn(let user) = state,
+              let accessToken = tokens?.accessToken ?? (try? tokenStore.load())?.accessToken else {
+            return
+        }
+
+        let snapshot = entitlementSnapshotStore.databaseSyncSnapshot
+        guard snapshot.hasAnyEntitlement else {
+            return
+        }
+
+        do {
+            _ = try await authService.syncEntitlements(
+                userID: user.id,
+                accessToken: accessToken,
+                snapshot: snapshot
+            )
+            entitlementSnapshotStore.markDatabaseSyncComplete()
+        } catch {
+            message = nil
         }
     }
 }

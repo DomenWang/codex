@@ -35,6 +35,7 @@ final class ReferralStateStore: ObservableObject {
         URL(string: "weatherwake://invite?ref=\(inviterID.uuidString)")!
     }
 
+    @MainActor
     func handleInviteURL(_ url: URL) {
         guard url.scheme == "weatherwake",
               url.host == "invite",

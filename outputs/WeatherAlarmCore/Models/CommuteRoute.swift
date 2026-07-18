@@ -24,10 +24,15 @@ struct CommuteRoute: Codable, Equatable {
     /// 不能在 TransitService 里写死 1800 秒；否则不同用户的通勤路线会被错误计算。
     var baseDurationSeconds: TimeInterval
 
-    /// 高德路线距离，单位：米。用于估算雨雪对步行/骑行等方式的额外影响。
+    /// 路线距离，单位：米。用于估算雨雪对步行/骑行等方式的额外影响。
     var baseDistanceMeters: Double?
 
-    /// `wgs84` 表示来自 CoreLocation；`gcj02` 表示来自高德地图 API。
+    /// 公共交通方案中需要实际步行的距离，单位：米。
+    ///
+    /// 雨天公交提前量只应该基于这段距离，而不是地铁/公交车行驶的总距离。
+    var baseWalkingDistanceMeters: Double?
+
+    /// `wgs84` 表示来自 Apple MapKit/CoreLocation；旧版本可能保存过 `gcj02`。
     var coordinateSystem: String?
 
     var effectiveMode: CommuteMode {

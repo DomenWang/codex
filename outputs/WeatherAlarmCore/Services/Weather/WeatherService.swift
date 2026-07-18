@@ -10,11 +10,11 @@ enum WeatherServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .missingMorningWindow:
-            return "Could not calculate the next 6:00-9:00 morning weather window."
+            return "暂时无法计算明早的天气时间段。"
         case .noHourlyForecastForMorningWindow:
-            return "WeatherKit did not return hourly forecast data for the 6:00-9:00 morning window."
+            return "暂时没有拿到明早小时级天气。"
         case .openMeteoMissingHourlyData:
-            return "Open-Meteo did not return usable hourly forecast data for the 6:00-9:00 morning window."
+            return "暂时没有拿到可用的小时级天气数据。"
         }
     }
 }
@@ -25,13 +25,43 @@ private struct OpenMeteoForecastResponse: Decodable {
     struct Hourly: Decodable {
         let time: [String]
         let precipitationProbability: [Double]?
+        let precipitation: [Double]?
+        let snowfall: [Double]?
+        let visibility: [Double]?
+        let windGusts: [Double]?
         let weatherCode: [Int]?
 
         enum CodingKeys: String, CodingKey {
             case time
             case precipitationProbability = "precipitation_probability"
+            case precipitation
+            case snowfall
+            case visibility
+            case windGusts = "wind_gusts_10m"
             case weatherCode = "weather_code"
         }
+    }
+}
+
+private struct HourlyWeatherSample {
+    let date: Date
+    let weatherCondition: String
+    let precipitationChancePercent: Double
+    let precipitationAmountMillimeters: Double?
+    let snowfallAmountCentimeters: Double?
+    let visibilityMeters: Double?
+    let windGustKilometersPerHour: Double?
+
+    var summary: HourlyWeatherSummary {
+        HourlyWeatherSummary(
+            date: date,
+            weatherCondition: weatherCondition,
+            precipitationChancePercent: precipitationChancePercent,
+            precipitationAmountMillimeters: precipitationAmountMillimeters,
+            snowfallAmountCentimeters: snowfallAmountCentimeters,
+            visibilityMeters: visibilityMeters,
+            windGustKilometersPerHour: windGustKilometersPerHour
+        )
     }
 }
 
@@ -64,38 +94,76 @@ final class WeatherService {
 
         let morningWindow = try nextMorningWindowWithin24Hours(after: now)
 
+        return try await fetchPrecipitationSummary(
+            for: location,
+            windowStart: morningWindow.start,
+            windowEnd: morningWindow.end,
+            forecastStart: startDate,
+            forecastEnd: endDate
+        )
+    }
+
+    func fetchPrecipitationSummary(
+        for location: CLLocation,
+        windowStart: Date,
+        windowEnd: Date,
+        forecastStart: Date? = nil,
+        forecastEnd: Date? = nil
+    ) async throws -> MorningWeatherSummary {
+        let startDate = forecastStart ?? max(Date(), calendar.date(byAdding: .hour, value: -1, to: windowStart) ?? windowStart)
+        let endDate = forecastEnd ?? calendar.date(byAdding: .hour, value: 24, to: windowEnd) ?? windowEnd.addingTimeInterval(24 * 60 * 60)
+
         do {
             let weather = try await appleWeatherService.weather(
                 for: location,
                 including: .hourly(startDate: startDate, endDate: endDate)
             )
 
-            let morningForecast = weather.forecast.filter { hourWeather in
-                hourWeather.date >= morningWindow.start && hourWeather.date < morningWindow.end
+            let fullForecast = weather.forecast.compactMap { hourWeather -> HourlyWeatherSample? in
+                guard hourWeather.date >= startDate && hourWeather.date < endDate else {
+                    return nil
+                }
+
+                return HourlyWeatherSample(
+                    date: hourWeather.date,
+                    weatherCondition: hourWeather.condition.description,
+                    precipitationChancePercent: hourWeather.precipitationChance * 100,
+                    precipitationAmountMillimeters: hourWeather.precipitationAmount.converted(to: .millimeters).value,
+                    snowfallAmountCentimeters: hourWeather.snowfallAmount.converted(to: .centimeters).value,
+                    visibilityMeters: hourWeather.visibility.converted(to: .meters).value,
+                    windGustKilometersPerHour: hourWeather.wind.gust?.converted(to: .kilometersPerHour).value
+                )
+            }
+            let windowForecast = fullForecast.filter {
+                $0.date >= windowStart && $0.date < windowEnd
             }
 
-            guard !morningForecast.isEmpty else {
+            guard !windowForecast.isEmpty else {
                 throw WeatherServiceError.noHourlyForecastForMorningWindow
             }
 
-            let wettestHour = morningForecast.max {
-                $0.precipitationChance < $1.precipitationChance
-            }
+            let wettestHour = Self.mostSignificantSample(in: windowForecast)
 
             guard let wettestHour else {
                 throw WeatherServiceError.noHourlyForecastForMorningWindow
             }
 
             return MorningWeatherSummary(
-                weatherCondition: wettestHour.condition.description,
-                precipitationChancePercent: wettestHour.precipitationChance * 100,
-                windowStart: morningWindow.start,
-                windowEnd: morningWindow.end
+                weatherCondition: wettestHour.weatherCondition,
+                precipitationChancePercent: wettestHour.precipitationChancePercent,
+                precipitationAmountMillimeters: wettestHour.precipitationAmountMillimeters,
+                windowStart: windowStart,
+                windowEnd: windowEnd,
+                hourlyForecast: windowForecast.map(\.summary),
+                fullHourlyForecast: fullForecast.map(\.summary)
             )
         } catch {
             return try await fetchOpenMeteoMorningSummary(
                 for: location,
-                morningWindow: morningWindow
+                windowStart: windowStart,
+                windowEnd: windowEnd,
+                forecastStart: startDate,
+                forecastEnd: endDate
             )
         }
     }
@@ -105,13 +173,19 @@ final class WeatherService {
     /// 这不是 Mock：Open-Meteo 会使用用户真实坐标请求小时级预报。若请求失败或没有 6:00-9:00 数据，同样抛错。
     private func fetchOpenMeteoMorningSummary(
         for location: CLLocation,
-        morningWindow: (start: Date, end: Date)
+        windowStart: Date,
+        windowEnd: Date,
+        forecastStart: Date,
+        forecastEnd: Date
     ) async throws -> MorningWeatherSummary {
         var components = URLComponents(string: "https://api.open-meteo.com/v1/forecast")
         components?.queryItems = [
             URLQueryItem(name: "latitude", value: String(format: "%.6f", location.coordinate.latitude)),
             URLQueryItem(name: "longitude", value: String(format: "%.6f", location.coordinate.longitude)),
-            URLQueryItem(name: "hourly", value: "precipitation_probability,weather_code"),
+            URLQueryItem(
+                name: "hourly",
+                value: "precipitation_probability,precipitation,snowfall,visibility,wind_gusts_10m,weather_code"
+            ),
             URLQueryItem(name: "forecast_days", value: "2"),
             URLQueryItem(name: "timezone", value: "auto")
         ]
@@ -133,28 +207,53 @@ final class WeatherService {
         formatter.timeZone = .current
         formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
 
-        let candidates = forecast.hourly.time.enumerated().compactMap { index, timeText -> (date: Date, chance: Double, code: Int?)? in
+        let fullCandidates = forecast.hourly.time.enumerated().compactMap { index, timeText -> HourlyWeatherSample? in
             guard let date = formatter.date(from: timeText),
-                  date >= morningWindow.start,
-                  date < morningWindow.end else {
+                  date >= forecastStart,
+                  date < forecastEnd else {
                 return nil
             }
 
             let chance = forecast.hourly.precipitationProbability?[safe: index] ?? 0
             let code = forecast.hourly.weatherCode?[safe: index]
-            return (date, chance, code)
+            return HourlyWeatherSample(
+                date: date,
+                weatherCondition: Self.openMeteoConditionDescription(for: code),
+                precipitationChancePercent: chance,
+                precipitationAmountMillimeters: forecast.hourly.precipitation?[safe: index],
+                snowfallAmountCentimeters: forecast.hourly.snowfall?[safe: index],
+                visibilityMeters: forecast.hourly.visibility?[safe: index],
+                windGustKilometersPerHour: forecast.hourly.windGusts?[safe: index]
+            )
+        }
+        let candidates = fullCandidates.filter {
+            $0.date >= windowStart && $0.date < windowEnd
         }
 
-        guard let wettestHour = candidates.max(by: { $0.chance < $1.chance }) else {
+        guard let wettestHour = Self.mostSignificantSample(in: candidates) else {
             throw WeatherServiceError.openMeteoMissingHourlyData
         }
 
         return MorningWeatherSummary(
-            weatherCondition: Self.openMeteoConditionDescription(for: wettestHour.code),
-            precipitationChancePercent: wettestHour.chance,
-            windowStart: morningWindow.start,
-            windowEnd: morningWindow.end
+            weatherCondition: wettestHour.weatherCondition,
+            precipitationChancePercent: wettestHour.precipitationChancePercent,
+            precipitationAmountMillimeters: wettestHour.precipitationAmountMillimeters,
+            windowStart: windowStart,
+            windowEnd: windowEnd,
+            hourlyForecast: candidates.map(\.summary),
+            fullHourlyForecast: fullCandidates.map(\.summary)
         )
+    }
+
+    private static func mostSignificantSample(in samples: [HourlyWeatherSample]) -> HourlyWeatherSample? {
+        samples.max { lhs, rhs in
+            let lhsAmount = lhs.precipitationAmountMillimeters ?? -1
+            let rhsAmount = rhs.precipitationAmountMillimeters ?? -1
+            if lhsAmount == rhsAmount {
+                return lhs.precipitationChancePercent < rhs.precipitationChancePercent
+            }
+            return lhsAmount < rhsAmount
+        }
     }
 
     private static func openMeteoConditionDescription(for code: Int?) -> String {
@@ -219,4 +318,3 @@ private extension Array {
         indices.contains(index) ? self[index] : nil
     }
 }
-

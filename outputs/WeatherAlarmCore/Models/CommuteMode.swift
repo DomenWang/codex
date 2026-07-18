@@ -23,33 +23,34 @@ enum CommuteMode: String, CaseIterable, Codable, Hashable, Identifiable {
         }
     }
 
-    /// 根据真实 WeatherKit 降水概率和高德返回的真实路线距离，估算雨雪对不同出行方式的额外影响。
-    /// 这不是天气或路线 Mock，只是业务规则。
-    func weatherImpactMinutes(
+    /// 地图 ETA 未覆盖的天气影响。概率已经在天气风险中作为可信度使用，不能再次判“强降水”。
+    func residualWeatherImpactMinutes(
         distanceMeters: Double?,
-        weatherCondition: String,
-        precipitationChancePercent: Double
+        walkingDistanceMeters: Double?,
+        plannedDurationSeconds: TimeInterval,
+        weatherRisk: Double,
+        hasTrafficAwareETA: Bool
     ) -> Int {
-        guard precipitationChancePercent > 30 else {
+        let risk = min(1, max(0, weatherRisk))
+        guard risk > 0 else {
             return 0
         }
 
-        let isHeavy = precipitationChancePercent > 60
-        let isSnow = weatherCondition.localizedCaseInsensitiveContains("snow") ||
-            weatherCondition.contains("雪")
-        let distanceKilometers = max(0, (distanceMeters ?? 0) / 1000)
-
         switch self {
         case .driving:
-            return isHeavy || isSnow ? 5 : 0
+            guard !hasTrafficAwareETA else {
+                return 0
+            }
+            let speedReduction = 0.02 + 0.14 * risk
+            let extraSeconds = max(0, plannedDurationSeconds) * (1 / (1 - speedReduction) - 1)
+            return min(40, Int(ceil(extraSeconds / 60)))
         case .transit:
-            return isHeavy || isSnow ? 10 : 5
+            let exposedWalkingMinutes = max(0, walkingDistanceMeters ?? 0) / 80
+            return min(8, Int(ceil(exposedWalkingMinutes * 0.35 * risk)))
         case .bicycling:
-            let minutesPerKilometer = isHeavy || isSnow ? 5.0 : 2.0
-            return Int(ceil(distanceKilometers * minutesPerKilometer))
+            return min(15, Int(ceil(max(0, plannedDurationSeconds) / 60 * 0.35 * risk)))
         case .walking:
-            let minutesPerKilometer = isHeavy || isSnow ? 7.0 : 4.0
-            return Int(ceil(distanceKilometers * minutesPerKilometer))
+            return min(8, Int(ceil(max(0, plannedDurationSeconds) / 60 * 0.20 * risk)))
         }
     }
 }

@@ -17,6 +17,8 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: WeatherAlarm
+        excludes:
+          - graphify-out
       - path: outputs/WeatherAlarmCore
         excludes:
           - IntegrationNotes.md
@@ -25,7 +27,8 @@ targets:
       properties:
         CFBundleDisplayName: SmartWake
         CFBundleShortVersionString: "1.0"
-        CFBundleVersion: "1"
+        CFBundleVersion: "35"
+        ITSAppUsesNonExemptEncryption: false
         CFBundleURLTypes:
           - CFBundleURLName: weatherwake.invite
             CFBundleURLSchemes:
@@ -43,15 +46,15 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         NSAlarmKitUsageDescription: Used to adjust your wake-up alarm based on tomorrow morning weather and commute conditions.
-        NSLocationWhenInUseUsageDescription: Used to request your current location for real WeatherKit forecasts.
-        AMapWebServiceAPIKey: ae9b87a9bed26996b16ff1d016c57324
-        AMapIOSSDKAPIKey: 48af497021f8e1e26502a6fdea93a1f0
-        AMapJSAPIKey: 19f1f3bb82da42e31939daa17688f4be
-        AMapJSSecurityCode: 977fcb2da98d276b5216b01348e1af3f
+        NSLocationWhenInUseUsageDescription: 用于获取当前位置，以便查询对应时段的真实天气并计算智能提前。
+        NSLocationAlwaysAndWhenInUseUsageDescription: Used to refresh weather and commute conditions before alarms so SmartWake can adjust wake-up time reliably.
+        NSLocationAlwaysUsageDescription: Used to refresh weather and commute conditions before alarms so SmartWake can adjust wake-up time reliably.
+        NSMotionUsageDescription: Used to verify shake or walking challenges before dismissing selected alarms.
         AuthAPIBaseURL: https://domenwang-weather-alarm-auth.onrender.com
         BGTaskSchedulerPermittedIdentifiers:
           - com.domenx.SmartWake.daily-weather-refresh
         UIBackgroundModes:
+          - audio
           - fetch
     entitlements:
       path: WeatherAlarm/WeatherAlarm.entitlements
@@ -62,7 +65,11 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.domenx.SmartWake
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: SH7C363297
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG SMARTWAKE_ALL_PAID_TEST"
 
   WeatherAlarmWidget:
     type: app-extension
@@ -76,9 +83,9 @@ targets:
     info:
       path: WeatherAlarmWidget/Info.plist
       properties:
-        CFBundleDisplayName: WeatherAlarmWidget
+        CFBundleDisplayName: SmartWake
         CFBundleShortVersionString: "1.0"
-        CFBundleVersion: "1"
+        CFBundleVersion: "35"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
@@ -87,4 +94,31 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.domenx.SmartWake.widget
         CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: SH7C363297
         APPLICATION_EXTENSION_API_ONLY: YES
+
+  WeatherAlarmTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: WeatherAlarmTests
+    dependencies:
+      - target: WeatherAlarm
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.domenx.SmartWake.tests
+        GENERATE_INFOPLIST_FILE: YES
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) DEBUG SMARTWAKE_ALL_PAID_TEST"
+
+schemes:
+  WeatherAlarm:
+    build:
+      targets:
+        WeatherAlarm: all
+        WeatherAlarmTests: [test]
+    test:
+      targets:
+        - WeatherAlarmTests

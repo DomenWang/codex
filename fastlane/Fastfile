@@ -15,15 +15,15 @@ platform :ios do
     )
   end
 
-  desc "Publish the validated unpaid Build 34 and resubmit version 1.0"
-  lane :release_build34 do
+  desc "Publish the validated unpaid Build 35 and submit version 1.0"
+  lane :release_build35 do
     api_key = smartwake_api_key
 
     deliver(
       api_key: api_key,
       app_identifier: "com.domenx.SmartWake",
       app_version: "1.0",
-      build_number: "34",
+      build_number: "35",
       platform: "ios",
       metadata_path: "fastlane/metadata",
       screenshots_path: "fastlane/screenshots",
@@ -42,13 +42,13 @@ platform :ios do
     )
   end
 
-  desc "Use the already-uploaded metadata and screenshots, then bind Build 34 and submit"
-  lane :finalize_build34 do
+  desc "Use the existing metadata and screenshots, then bind Build 35 and submit"
+  lane :finalize_build35 do
     deliver(
       api_key: smartwake_api_key,
       app_identifier: "com.domenx.SmartWake",
       app_version: "1.0",
-      build_number: "34",
+      build_number: "35",
       platform: "ios",
       skip_binary_upload: true,
       skip_metadata: true,
