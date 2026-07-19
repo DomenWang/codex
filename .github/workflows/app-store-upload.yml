@@ -190,6 +190,7 @@ jobs:
           set -euo pipefail
           gem install jwt --no-document
           ruby .github/scripts/asc_inspect.rb
+          ruby .github/scripts/asc_inspect_products.rb
 
   replace-app-store-build:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'replace' }}
